@@ -1,0 +1,271 @@
+import streamlit as st
+from streamlit_folium import st_folium
+import folium
+from folium.plugins import Draw, Geocoder, Search
+import geopandas as gpd
+import tempfile
+import zipfile
+
+from map import add_small_geocoder
+from shapefile_upload import point_shapefile, polyline_shapefile
+from enter_value_upload import enter_latlng, enter_mileposts
+from draw_upload import draw_point, draw_line
+from details_form import project_details_form
+from aashtoware import aashtoware_project, aashtoware_point
+from contacts import contacts_list
+from instructions import instructions
+
+st.set_page_config(page_title="Alaska DOT&PF - APEX Project Creator", page_icon="📝", layout="centered")
+
+# Base overview map
+m = folium.Map(location=[64.2008, -149.4937], zoom_start=4)
+add_small_geocoder(m)
+
+# Initialize session state
+defaults = {
+    "step": 1,
+    "selected_point": None,
+    "selected_route": None,
+    "project_type": None,
+    "geo_option": None,
+    "info_option": None,
+    "aashto_id": "",
+    "project_name": "",
+    "project_description": "",
+    "project_category": None,
+    "project_contacts": None,
+    'details_complete': False
+}
+for key, val in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
+
+TOTAL_STEPS = 5
+
+def next_step():
+    if st.session_state.step < TOTAL_STEPS:
+        st.session_state.step += 1
+
+def prev_step():
+    if st.session_state.step > 1:
+        st.session_state.step -= 1
+
+# Header and progress
+st.title("📝 ADD NEW APEX PROJECT")
+st.markdown("##### COMPLETE STEPS TO ADD A NEW PROJECT TO THE APEX DATABASE")
+st.progress(st.session_state.step / TOTAL_STEPS)
+st.caption(f"Step {st.session_state.step} of {TOTAL_STEPS}")
+st.write("")
+
+# Step content
+if st.session_state.step == 1:
+    st.header("Welcome")
+    st.write("""
+        ##### Alaska DOT&PF APEX Project Creation
+
+        Follow these steps to create a new project in the system:
+
+        **Step 1: Enter Project Information**  
+        Provide project details either by pulling data from the AASHTOWare database or entering them manually.  
+        Review and complete all required fields to ensure accuracy.
+
+        ---
+
+        **Step 2: Add Project Contacts**  
+        Assign roles to project contacts and enter available details such as name, email, and phone.  
+        Use **Add Contact** to build a list of contacts, and remove any entries if needed.  
+        Confirm that all necessary contacts are included before continuing.
+
+        ---
+
+        **Step 3: Upload Geospatial Data**  
+        Select the project type (**Site** or **Route**) and upload or create the corresponding geometry.  
+        Choose the upload method that best matches your data (shapefile, coordinates, or map input).  
+        Verify that the geometry is correct and reflects your project scope.
+
+        ---
+
+        **Step 4: Review and Confirm**  
+        Check all project information, contacts, and geospatial data for completeness and accuracy.  
+        Make any adjustments before finalizing.
+
+        ---
+
+        **Step 5: Submit Project**  
+        Click **Submit** to validate the data.  
+        Once approved, the project will be saved to the database and you can proceed to the next workflow stage.
+        """)
+
+    st.info("Click **Next** to begin.")
+
+elif st.session_state.step == 2:
+    st.markdown("### PROJECT INFORMATION 📄")
+    st.write(
+    "Choose either the AASHTOWare source or User Input to provide project details. "
+    "Complete the form, then click **Submit** to save and continue."
+    )
+
+    instructions("Project Information")
+
+    st.write("")
+    st.write("")
+
+    st.markdown("<h5>Choose Source</h5>", unsafe_allow_html=True)
+    info_option = st.segmented_control(
+        "Choose Source Method:",
+        ["AASHTOWare Database", "User Input"],
+        default=None
+    )
+    st.session_state.info_option = info_option
+
+    st.write("")
+
+    if info_option == "AASHTOWare Database":
+        st.markdown("<h5>Select Project & Complete Form</h5>", unsafe_allow_html=True)
+        aashtoware_project()
+    elif info_option == "User Input":
+        st.markdown("<h5>Complete Form</h5>", unsafe_allow_html=True)
+        project_details_form(is_awp=False)
+
+    st.write("")
+    st.write("")
+
+elif st.session_state.step == 3:
+    st.markdown("### ADD CONTACTS 👥")
+    st.write(
+    "Complete the contact form by adding all available project contacts. "
+    "Once the list is finalized, proceed to the next step."
+    )
+
+    instructions("Contacts")
+
+    st.write("")
+    st.write("")
+
+    st.markdown("<h5>Contact Information</h5>", unsafe_allow_html=True)
+    contacts_list()
+
+elif st.session_state.step == 4:
+    st.markdown("### LOAD GEOMETRY 📍")
+    st.write(
+    "Select the project type and provide its geometry. "
+    "After choosing a type, you will see the available upload methods. "
+    "Review the instructions below for detailed guidance before continuing."
+    )
+
+    # Call the reusable instructions function
+    instructions("Load Geometry")
+
+    st.write("")
+    st.write("")
+
+    # First: choose Site or Route
+    st.markdown("<h5>Choose Project Type</h5>", unsafe_allow_html=True)
+    project_type = st.segmented_control(
+        "Select Project Type:",
+        [
+            "Site Project",
+            "Route Project"
+        ],
+        default=None
+    )
+    st.session_state.project_type = project_type
+
+    st.write("")
+    if project_type:
+        st.markdown("<h5>Upload Geospatial Data</h5>", unsafe_allow_html=True)
+
+        show_awp_option = (
+            st.session_state.info_option == "AASHTOWare Database"
+            and project_type.startswith("Site")
+            and st.session_state.get("awp_dcml_latitude")
+            and st.session_state.get("awp_dcml_longitude")
+        )
+
+        if project_type.startswith("Site"):
+            options = ["Upload Shapefile", "Enter Latitude/Longitude", "Select Point on Map"]
+            if show_awp_option:
+                options =  options + ["AASHTOWare"]
+
+            option = st.segmented_control("Choose Upload Method:", options, default=options[0])
+
+            # Reset geometry when method changes
+            if st.session_state.get("geo_option") != option:
+                st.session_state.selected_point = None
+                st.session_state.selected_route = None
+            st.session_state.geo_option = option
+
+            if option == "AASHTOWare":
+                aashtoware_point(st.session_state.get("awp_dcml_latitude"), st.session_state.get("awp_dcml_longitude"))
+            elif option == "Upload Shapefile":
+                point_shapefile()
+            elif option == "Select Point on Map":
+                draw_point()
+            elif option == "Enter Latitude/Longitude":
+                enter_latlng()
+
+        else:  # Route project
+            options = ["Upload Shapefile", "Enter Mileposts", "Draw Route on Map"]
+            option = st.segmented_control("Choose Upload Method:", options, default=options[0])
+
+            if st.session_state.get("geo_option") != option:
+                st.session_state.selected_point = None
+                st.session_state.selected_route = None
+            st.session_state.geo_option = option
+
+            if option == "Upload Shapefile":
+                polyline_shapefile()
+            elif option == "Enter Mileposts":
+                enter_mileposts()
+            elif option == "Draw Route on Map":
+                draw_line()
+
+elif st.session_state.step == 5:
+    st.header("Review & Submit")
+    st.write("- Project Type:", st.session_state.get("project_type", "—"))
+    st.write("- Geospatial Input:", st.session_state.get("geo_option", "—"))
+    if st.session_state.selected_point:
+        st.write("- Coordinates:", st.session_state.selected_point)
+    if st.session_state.selected_route:
+        st.write("- Route geometry points:", len(st.session_state.selected_route))
+    st.write("- Information Source:", st.session_state.get("info_option", "—"))
+    if st.session_state.info_option == "AASHTOWare Database":
+        st.write("- AASHTOWare ID:", st.session_state.get("aashto_id", "—"))
+    else:
+        st.write("- Project Name:", st.session_state.get("project_name", "—"))
+        st.write("- Project Category:", st.session_state.get("project_category", "—"))
+        if st.session_state.project_description:
+            st.write("- Description:", st.session_state.project_description)
+    st.success("If everything looks correct, press Submit.")
+    st.button("Submit Project")
+
+# Navigation controls with validation
+st.write("")
+cols = st.columns([1, 1, 4])
+with cols[0]:
+    st.button("⬅️ Back", on_click=prev_step, disabled=st.session_state.step == 1)
+
+with cols[1]:
+    can_proceed = False
+
+    if st.session_state.step == 1:
+        can_proceed = True
+    elif st.session_state.step == 2:
+        can_proceed = st.session_state.get("details_complete", False)
+    elif st.session_state.step == 3:
+        can_proceed = True
+    elif st.session_state.step == 4:
+        if st.session_state.project_type:
+            if st.session_state.project_type.startswith("Site"):
+                can_proceed = st.session_state.selected_point is not None
+            else:
+                can_proceed = st.session_state.selected_route is not None
+        else:
+            can_proceed = False
+    elif st.session_state.step == 5:
+        can_proceed = True
+
+    if st.session_state.step < TOTAL_STEPS:
+        st.button("Next ➡️", on_click=next_step, disabled=not can_proceed)
+
+st.caption("Use Back and Next to navigate. Refresh will reset this session.")

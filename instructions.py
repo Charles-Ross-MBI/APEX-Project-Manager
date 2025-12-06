@@ -81,6 +81,35 @@ Review the list for accuracy and completeness.
 When finished, continue to the next step in the workflow.
 """,
 
+    "Review": """
+##### Step 1: Review Entered Information
+Carefully review all information entered in previous steps.  
+The review will display in the following order:
+- **Project Name**  
+- **Submitted Project Geometry**  
+- **Project Information**  
+- **Contacts**
+
+---
+
+##### Step 2: Make Updates if Needed
+If any value needs to be changed, backtrack to the appropriate step and update the information.  
+Once updated, return to this tab to continue.
+
+---
+
+##### Step 3: Submit Project
+If all information is complete and correct, click **Submit**.  
+The application will process the submitted data and load it into the **APEX Database**.  
+Completion steps will appear as they are being performed.
+
+---
+
+##### Step 4: Confirmation
+If the data was submitted successfully, the application will notify you.  
+At that point, you may close the application or restart to add a new entry.
+""",
+
     "Other Tab Example": """
 #### Instructions
 Add instructions for other tabs here as needed.

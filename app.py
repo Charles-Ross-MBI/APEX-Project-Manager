@@ -14,6 +14,7 @@ from details_form import project_details_form
 from aashtoware import aashtoware_project, aashtoware_point
 from contacts import contacts_list
 from instructions import instructions
+from review import review_information
 
 st.set_page_config(page_title="Alaska DOT&PF - APEX Project Creator", page_icon="📝", layout="centered")
 
@@ -221,23 +222,20 @@ elif st.session_state.step == 4:
                 draw_line()
 
 elif st.session_state.step == 5:
-    st.header("Review & Submit")
-    st.write("- Project Type:", st.session_state.get("project_type", "—"))
-    st.write("- Geospatial Input:", st.session_state.get("geo_option", "—"))
-    if st.session_state.selected_point:
-        st.write("- Coordinates:", st.session_state.selected_point)
-    if st.session_state.selected_route:
-        st.write("- Route geometry points:", len(st.session_state.selected_route))
-    st.write("- Information Source:", st.session_state.get("info_option", "—"))
-    if st.session_state.info_option == "AASHTOWare Database":
-        st.write("- AASHTOWare ID:", st.session_state.get("aashto_id", "—"))
-    else:
-        st.write("- Project Name:", st.session_state.get("project_name", "—"))
-        st.write("- Project Category:", st.session_state.get("project_category", "—"))
-        if st.session_state.project_description:
-            st.write("- Description:", st.session_state.project_description)
-    st.success("If everything looks correct, press Submit.")
-    st.button("Submit Project")
+    st.markdown("### REVIEW & SUBMIT ✔️")
+    st.write(
+    "Review all submitted project information carefully. "
+    "Confirm details are correct before pressing Submit. "
+    "Once submitted, the project will be loaded into the APEX Database.")
+
+    instructions("Review")
+
+    st.write("")
+    st.write("")
+
+    review_information()
+
+    st.write("")
 
 # Navigation controls with validation
 st.write("")

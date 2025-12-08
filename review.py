@@ -1,11 +1,13 @@
 import streamlit as st
 from streamlit_folium import st_folium
 import folium
+from map import set_bounds_route
+
 
 def review_information():
 
     # --- Project Name ---
-    project_name = st.session_state.get("project_name", "")
+    project_name = st.session_state.get("proj_name", "")
     awp_proj_name = st.session_state.get("awp_proj_name", "—")
     display_name = project_name if project_name else awp_proj_name
     st.markdown(f"<h3>{display_name}</h3>", unsafe_allow_html=True)
@@ -18,11 +20,14 @@ def review_information():
         m = folium.Map(location=[lat, lon], zoom_start=12)
         folium.Marker([lat, lon], popup="Project Point").add_to(m)
     elif st.session_state.get("selected_route"):
-        route_points = st.session_state.selected_route
-        m = folium.Map(location=route_points[0], zoom_start=10)
-        folium.PolyLine(route_points, color="blue", weight=3).add_to(m)
+        route = st.session_state.selected_route  # list of [lat, lon]
+        m = folium.Map(location=route[0], zoom_start=10)
+        folium.PolyLine(route, color="blue", weight=3).add_to(m)
+        # Convert [lat, lon] -> [lon, lat] for bounds helper
+        route_bounds = [(lon, lat) for (lat, lon) in st.session_state.selected_route]
+        m.fit_bounds(set_bounds_route(route_bounds))
     if m:
-        st_folium(m, width=700, height=500)
+        st_folium(m, width=700, height=400)
 
     st.write("")
     st.write("")
@@ -39,19 +44,16 @@ def review_information():
         col2.markdown(f"**IRIS:** {st.session_state.get('iris','—')}")
         col1.markdown(f"**STIP:** {st.session_state.get('stip','—')}")
         col2.markdown(f"**Federal Project Number:** {st.session_state.get('fed_proj_num','—')}")
-        col1.markdown(f"**Traffic Impact:** {st.session_state.get('traffic_impact','—')}")
-        col2.markdown(f"**Project Practice:** {st.session_state.get('proj_prac','—')}")
+        col1.markdown(f"**Practice:** {st.session_state.get('proj_prac','—')}")
 
     # Narrative (Purpose, Description, Impact)
     with st.expander("Purpose, Description & Impact", expanded=True):
         st.markdown(f"**Purpose:**\n\n{st.session_state.get('proj_purp','—')}")
-
         if st.session_state.get("info_option") == "AASHTOWare Database":
             st.markdown(f"**AASHTOWare Description:**\n\n{st.session_state.get('awp_proj_desc','—')}")
             st.markdown(f"**Public Project Description:**\n\n{st.session_state.get('proj_desc','—')}")
         else:
             st.markdown(f"**Project Description:**\n\n{st.session_state.get('proj_desc','—')}")
-
         st.markdown(f"**Impact:**\n\n{st.session_state.get('proj_impact','—')}")
 
     # Funding
@@ -63,9 +65,21 @@ def review_information():
         col2.markdown(f"**Award Fiscal Year:** {st.session_state.get('award_fiscal_year','—')}")
         col1.markdown(f"**Award Date:** {st.session_state.get('award_date','—')}")
         col2.markdown(f"**Contractor:** {st.session_state.get('contractor','—')}")
-        col1.markdown(f"**Awarded Amount:** {st.session_state.get('awarded_amount','—')}")
-        col2.markdown(f"**Current Contract Amount:** {st.session_state.get('current_contract_amount','—')}")
-        col1.markdown(f"**Amount Paid to Date:** {st.session_state.get('amount_paid_to_date','—')}")
+        col1.markdown(
+            "**Awarded Amount:** "
+            + (("${:,.0f}".format(float(st.session_state.get("awarded_amount", 0))))
+               if st.session_state.get("awarded_amount") not in (None, "") else "")
+        )
+        col2.markdown(
+            "**Current Contract Amount:** "
+            + (("${:,.0f}".format(float(st.session_state.get("current_contract_amount", 0))))
+               if st.session_state.get("current_contract_amount") not in (None, "") else "")
+        )
+        col1.markdown(
+            "**Amount Paid to Date:** "
+            + (("${:,.0f}".format(float(st.session_state.get("amount_paid_to_date", 0))))
+               if st.session_state.get("amount_paid_to_date") not in (None, "") else "")
+        )
         col2.markdown(f"**Tenadd:** {st.session_state.get('tenadd','—')}")
 
     # Timeline
@@ -83,16 +97,18 @@ def review_information():
             impact_comm_display = impact_comm
         st.markdown(f"**Communities:** {impact_comm_display}")
 
-    # Location
+    
+    # Location details (keep route-specific fields if applicable)
     with st.expander("Location", expanded=True):
         col1, col2 = st.columns(2)
         if st.session_state.get("project_type") == "Route":
             col1.markdown(f"**Route ID:** {st.session_state.get('route_id','—')}")
             col2.markdown(f"**Route Name:** {st.session_state.get('route_name','—')}")
-        col1.markdown(f"**DOT&PF Region:** {st.session_state.get('dot_pf_region','—')}")
-        col2.markdown(f"**Borough/Census Area:** {st.session_state.get('borough_census_area','—')}")
-        col1.markdown(f"**Senate District:** {st.session_state.get('senate_district','—')}")
-        col2.markdown(f"**House District:** {st.session_state.get('house_district','—')}")
+        # Show single-value location fields if you keep them
+        col1.markdown(f"**House Districts:** {st.session_state.get('house_string','—')}")
+        col2.markdown(f"**Senate Districts:** {st.session_state.get('senate_string','—')}")
+        col1.markdown(f"**Boroughs:** {st.session_state.get('borough_string','—')}")
+        col2.markdown(f"**DOT&PF Regions:** {st.session_state.get('region_string','—')}")
 
     # Status & Links
     with st.expander("Status & Links", expanded=True):

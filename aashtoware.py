@@ -33,8 +33,7 @@ def aashtoware_point(lat: float, lon: float):
     folium.Marker([lat_val, lon_val], popup=f"Lat: {lat_val}, Lon: {lon_val}").add_to(m)
     add_small_geocoder(m)
     st_folium(m, width=700, height=500)
-    st.success(f"Point Loaded: [{round(lat,6)}, {round(lon,6)}]")
-
+    
     # ✅ Update session_state if valid point
     if lat_val and lon_val:
         try:

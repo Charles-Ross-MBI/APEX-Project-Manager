@@ -15,6 +15,8 @@ from aashtoware import aashtoware_project, aashtoware_point
 from contacts import contacts_list
 from instructions import instructions
 from review import review_information
+from district_queries import run_district_queries
+
 
 st.set_page_config(page_title="Alaska DOT&PF - APEX Project Creator", page_icon="📝", layout="centered")
 
@@ -146,15 +148,16 @@ elif st.session_state.step == 3:
     st.markdown("<h5>Contact Information</h5>", unsafe_allow_html=True)
     contacts_list()
 
+
+
 elif st.session_state.step == 4:
     st.markdown("### LOAD GEOMETRY 📍")
     st.write(
-    "Select the project type and provide its geometry. "
-    "After choosing a type, you will see the available upload methods. "
-    "Review the instructions below for detailed guidance before continuing."
+        "Select the project type and provide its geometry. "
+        "After choosing a type, you will see the available upload methods. "
+        "Review the instructions below for detailed guidance before continuing."
     )
 
-    # Call the reusable instructions function
     instructions("Load Geometry")
 
     st.write("")
@@ -164,13 +167,18 @@ elif st.session_state.step == 4:
     st.markdown("<h5>Choose Project Type</h5>", unsafe_allow_html=True)
     project_type = st.segmented_control(
         "Select Project Type:",
-        [
-            "Site Project",
-            "Route Project"
-        ],
+        ["Site Project", "Route Project"],
         default=None
     )
     st.session_state.project_type = project_type
+
+    # If project_type changed, clear all district values
+    if st.session_state.get("prev_project_type") != project_type:
+        st.session_state.house_string = ""
+        st.session_state.senate_string = ""
+        st.session_state.borough_string = ""
+        st.session_state.region_string = ""
+        st.session_state.prev_project_type = project_type
 
     st.write("")
     if project_type:
@@ -186,11 +194,10 @@ elif st.session_state.step == 4:
         if project_type.startswith("Site"):
             options = ["Upload Shapefile", "Enter Latitude/Longitude", "Select Point on Map"]
             if show_awp_option:
-                options =  options + ["AASHTOWare"]
+                options = options + ["AASHTOWare"]
 
             option = st.segmented_control("Choose Upload Method:", options, default=options[0])
 
-            # Reset geometry when method changes
             if st.session_state.get("geo_option") != option:
                 st.session_state.selected_point = None
                 st.session_state.selected_route = None
@@ -198,12 +205,16 @@ elif st.session_state.step == 4:
 
             if option == "AASHTOWare":
                 aashtoware_point(st.session_state.get("awp_dcml_latitude"), st.session_state.get("awp_dcml_longitude"))
+                st.session_state.selected_route = None
             elif option == "Upload Shapefile":
                 point_shapefile()
+                st.session_state.selected_route = None
             elif option == "Select Point on Map":
                 draw_point()
+                st.session_state.selected_route = None
             elif option == "Enter Latitude/Longitude":
                 enter_latlng()
+                st.session_state.selected_route = None
 
         else:  # Route project
             options = ["Upload Shapefile", "Enter Mileposts", "Draw Route on Map"]
@@ -216,10 +227,59 @@ elif st.session_state.step == 4:
 
             if option == "Upload Shapefile":
                 polyline_shapefile()
+                st.session_state.selected_point = None
             elif option == "Enter Mileposts":
                 enter_mileposts()
+                st.session_state.selected_point = None
             elif option == "Draw Route on Map":
                 draw_line()
+                st.session_state.selected_point = None
+
+        st.write("")
+
+        # Initialize previous values
+        if "prev_selected_point" not in st.session_state:
+            st.session_state.prev_selected_point = None
+        if "prev_selected_route" not in st.session_state:
+            st.session_state.prev_selected_route = None
+
+        point_val = st.session_state.get("selected_point")
+        route_val = st.session_state.get("selected_route")
+
+        point_changed = point_val is not None and point_val != st.session_state.prev_selected_point
+        route_changed = route_val is not None and route_val != st.session_state.prev_selected_route
+
+        if point_changed or route_changed:
+            run_district_queries()
+            st.session_state.prev_selected_point = point_val
+            st.session_state.prev_selected_route = route_val
+
+        # Collect values
+        house_val = st.session_state.get('house_string')
+        senate_val = st.session_state.get('senate_string')
+        borough_val = st.session_state.get('borough_string')
+        region_val = st.session_state.get('region_string')
+
+        # Only show expander if current geometry type has content
+        if project_type.startswith("Site") and point_val is not None and any([house_val, senate_val, borough_val, region_val]):
+            with st.expander("PROJECT GEOGRAPHIES", expanded=True):
+                col1, col2 = st.columns(2)
+                col1.markdown(f"**House Districts:** {house_val or '—'}")
+                col2.markdown(f"**Senate Districts:** {senate_val or '—'}")
+                col1.markdown(f"**Boroughs:** {borough_val or '—'}")
+                col2.markdown(f"**Regions:** {region_val or '—'}")
+
+        elif project_type.startswith("Route") and route_val is not None and any([house_val, senate_val, borough_val, region_val]):
+            with st.expander("PROJECT GEOGRAPHIES", expanded=True):
+                col1, col2 = st.columns(2)
+                col1.markdown(f"**House Districts:** {house_val or '—'}")
+                col2.markdown(f"**Senate Districts:** {senate_val or '—'}")
+                col1.markdown(f"**Boroughs:** {borough_val or '—'}")
+                col2.markdown(f"**Regions:** {region_val or '—'}")
+
+
+
+       
 
 elif st.session_state.step == 5:
     st.markdown("### REVIEW & SUBMIT ✔️")

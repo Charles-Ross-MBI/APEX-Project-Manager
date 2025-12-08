@@ -33,6 +33,19 @@ After uploading, carefully review the geometry displayed on the map.
 Make sure the location or route matches your project details.  
 Confirming accuracy at this stage is important because the geometry will be used in later steps for analysis and reporting.  
 If something looks incorrect, adjust or re‑upload before proceeding.
+
+---
+
+##### Step 4: Project Geographies
+Once geometry is successfully loaded into the app, the system will automatically process and query against four Alaska State geography layers:  
+- **House Districts**  
+- **Senate Districts**  
+- **Boroughs**  
+- **DOT&PF Regions**
+
+The results will be displayed as a list under **Project Geographies**.  
+Carefully review these values to ensure they are correct for your project.  
+If the districts or regions look wrong, adjust your geometry and reload before proceeding.
 """,
 
     "Project Information": """
@@ -87,6 +100,7 @@ Carefully review all information entered in previous steps.
 The review will display in the following order:
 - **Project Name**  
 - **Submitted Project Geometry**  
+- **Project Geographies**  
 - **Project Information**  
 - **Contacts**
 
@@ -115,8 +129,6 @@ At that point, you may close the application or restart to add a new entry.
 Add instructions for other tabs here as needed.
 """
 }
-
-
 
 
 

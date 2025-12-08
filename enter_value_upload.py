@@ -1,9 +1,8 @@
 import streamlit as st
 from streamlit_folium import st_folium
 import folium
-from map import add_small_geocoder
+from map import add_small_geocoder, add_bottom_message
 from agol_util import get_unique_field_values
-
 
 
 def enter_latlng():
@@ -34,16 +33,15 @@ def enter_latlng():
 
             m = folium.Map(location=[lat_val, lon_val], zoom_start=6)
             folium.Marker([lat_val, lon_val], popup="Selected Point").add_to(m)
-            add_small_geocoder(m)
-            st_folium(m, width=700, height=500)
 
-            st.success(f"Point Loaded: [{round(lat_val,6)}, {round(lon_val,6)}]")
+            add_small_geocoder(m)
+
+            st_folium(m, width=700, height=500)
 
         except ValueError:
             st.error("Please enter valid numeric values for latitude and longitude.")
     else:
         st.info("Enter both latitude and longitude to display the map.")
-
 
 
 def enter_mileposts():
@@ -83,6 +81,3 @@ def enter_mileposts():
         if start is not None and end is not None:
             st.write('')
             st.write(f"MAP WITH LRS LINEAR ROUTE WILL APPEAR BELOW")
-    
-
-    

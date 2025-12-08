@@ -89,3 +89,33 @@ def set_bounds_route(route):
 
     return [[min_lat, min_lon], [max_lat, max_lon]]
 
+
+
+def add_bottom_message(m, message: str):
+    """
+    Add a persistent bottom message bar to a Folium map.
+
+    Parameters
+    ----------
+    m : folium.Map
+        The map object to add the message to.
+    message : str
+        The text to display in the bottom message bar.
+    """
+    message_html = f"""
+    <div style="
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0,0,0,0.7);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        z-index:9999;">
+        {message}
+    </div>
+    """
+    m.get_root().html.add_child(folium.Element(message_html))
+

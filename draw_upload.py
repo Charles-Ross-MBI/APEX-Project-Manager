@@ -54,9 +54,6 @@ def draw_point():
             # ✅ Store consistently as [lat, lon]
             st.session_state.selected_point = [round(lat, 6), round(lon, 6)]
 
-            # Optional confirmation message
-            st.success(f"Point Loaded: [{round(lat,6)}, {round(lon,6)}]")
-
 
 def draw_line():
     st.write("")
@@ -105,4 +102,3 @@ def draw_line():
             formatted = [[round(lat, 6), round(lon, 6)] for lon, lat in coords]
 
             st.session_state.selected_route = formatted
-            st.success(f"Loaded Route with {len(formatted)} points")

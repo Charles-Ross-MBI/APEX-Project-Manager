@@ -1,5 +1,8 @@
+
 import streamlit as st
 from agol_util import get_multiple_fields
+import datetime
+
 
 # --- Existing helpers (unchanged) ---
 
@@ -203,9 +206,10 @@ def project_details_form(is_awp = False):
         st.markdown("<h5>4. AWARD INFORMATION</h4>", unsafe_allow_html=True)
         col12, col13 = st.columns(2)
         with col12:
-            st.session_state["award_date"] = st.text_input(
+            st.session_state["award_date"] = st.date_input(
                 "Award Date",
-                value=val("award_date", "awp_award_date")
+                format="MM/DD/YYYY",
+                value=val("awp_award_date") if is_awp else None
             )
         with col13:
             st.session_state["award_fiscal_year"] = session_selectbox(
@@ -238,10 +242,12 @@ def project_details_form(is_awp = False):
                 value=val("amount_paid_to_date", "awp_contract_amountpaidtodate", coerce_float=True)
             )
 
-        st.session_state["tenadd"] = st.text_input(
-            "Tentative Advertise Date",
-            value=val("tenadd", "awp_tentative_advertising_date")
-        )
+
+        st.session_state["tenadd"] = st.date_input(
+                "Tentative Advertise Date",
+                format="MM/DD/YYYY",
+                value=val("awp_tentative_advertising_date") if is_awp else None
+            )
 
         st.write("")
         st.write("")

@@ -3,14 +3,13 @@ import requests
 import streamlit as st
 
 import os
-#from dotenv import load_dotenv
+from dotenv import load_dotenv
+load_dotenv()
+agol_username = os.getenv("AGOL_USERNAME")
+agol_password = os.getenv("AGOL_PASSWORD")
 
-#load_dotenv()
-#agol_username = os.getenv("AGOL_USERNAME")
-#agol_password = os.getenv("AGOL_PASSWORD")
-
-agol_username = st.secrets["AGOL_USERNAME"]
-agol_password = st.secrets["AGOL_PASSWORD"]
+# agol_username = st.secrets["AGOL_USERNAME"]
+# agol_password = st.secrets["AGOL_PASSWORD"]
 
 
 aashtoware = 'https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/AWP_PROJECTS_EXPORT_XYTableToPoint_ExportFeatures/FeatureServer'
@@ -255,3 +254,127 @@ def select_record(url: str, layer: int, id_field: str, id_value: str):
     except Exception as e:
         raise Exception(f"Error retrieving project record: {e}")
 
+
+
+class AGOLQueryIntersect:
+    def __init__(self, url, layer, geometry, fields="*", return_geometry=False,
+                 list_values=None, string_values=None):
+        self.url = url
+        self.layer = layer
+        self.geometry = self._swap_coords(geometry)  # swap coords if needed
+        self.fields = fields
+        self.return_geometry = return_geometry
+        self.list_values_field = list_values
+        self.string_values_field = string_values
+        self.token = self._authenticate()
+
+        # Run query immediately on initialization
+        self.results = self._execute_query()
+
+        # If list_values is provided, store unique values in a list
+        self.list_values = []
+        if self.list_values_field:
+            self.list_values = self._extract_unique_values(self.list_values_field)
+
+        # If string_values is provided, store unique values in a comma-separated string
+        self.string_values = ""
+        if self.string_values_field:
+            unique_list = self._extract_unique_values(self.string_values_field)
+            self.string_values = ",".join(map(str, unique_list))
+
+    def _authenticate(self):
+        token = get_agol_token()
+        if not token:
+            raise ValueError("Authentication failed: Invalid token.")
+        return token
+
+    def _swap_coords(self, geometry):
+        """Swap coordinates from [lat, lon] to [lon, lat] if needed."""
+        if isinstance(geometry, list):
+            # Point
+            if len(geometry) == 2 and all(isinstance(coord, (int, float)) for coord in geometry):
+                return [geometry[1], geometry[0]]  # swap
+            # Line
+            elif all(isinstance(coord, list) and len(coord) == 2 for coord in geometry):
+                return [[pt[1], pt[0]] for pt in geometry]  # swap each pair
+        return geometry
+
+    def _build_geometry(self):
+        if isinstance(self.geometry, list):
+            # Point
+            if len(self.geometry) == 2 and all(isinstance(coord, (int, float)) for coord in self.geometry):
+                geometry_dict = {
+                    "x": self.geometry[0],
+                    "y": self.geometry[1],
+                    "spatialReference": {"wkid": 4326}
+                }
+                geometry_type_str = "esriGeometryPoint"
+
+            # Line
+            elif all(
+                isinstance(coord, list) and len(coord) == 2 and
+                all(isinstance(val, (int, float)) for val in coord)
+                for coord in self.geometry
+            ):
+                if len(self.geometry) >= 2:
+                    geometry_dict = {
+                        "paths": [self.geometry],
+                        "spatialReference": {"wkid": 4326}
+                    }
+                    geometry_type_str = "esriGeometryPolyline"
+                else:
+                    raise ValueError("Invalid geometry: A line must have at least two coordinate pairs.")
+            else:
+                raise ValueError("Invalid geometry format.")
+        else:
+            raise ValueError("Invalid geometry: Geometry must be a list.")
+
+        return geometry_dict, geometry_type_str
+
+    def _execute_query(self):
+        geometry_dict, geometry_type_str = self._build_geometry()
+
+        params = {
+            "geometry": json.dumps(geometry_dict),
+            "geometryType": geometry_type_str,
+            "inSR": 4326,
+            "spatialRel": "esriSpatialRelIntersects",
+            "where": "1=1",
+            "outFields": self.fields,
+            "returnGeometry": self.return_geometry,
+            "outSR": 4326,
+            "f": "json",
+            "token": self.token
+        }
+
+        query_url = f"{self.url}/{self.layer}/query"
+        response = requests.get(query_url, params=params)
+
+        if response.status_code != 200:
+            raise Exception(f"Request failed with status code {response.status_code}: {response.text}")
+
+        data = response.json()
+        if "error" in data:
+            raise Exception(f"API Error: {data['error']['message']} - {data['error'].get('details', [])}")
+
+        results = []
+        requested_fields = [f.strip() for f in self.fields.split(",") if f.strip()]
+        for feature in data.get("features", []):
+            attributes = feature.get("attributes", {})
+            filtered_attrs = {f: attributes.get(f) for f in requested_fields} if self.fields != "*" else attributes
+            feature_package = {"attributes": filtered_attrs}
+            if self.return_geometry:
+                feature_package["geometry"] = feature.get("geometry", {})
+            results.append(feature_package)
+
+        return results
+
+    def _extract_unique_values(self, field_name):
+        """Return a unique list of values for the specified field. Blank if no results."""
+        if not self.results:
+            return []  # no features returned
+        available_fields = {f for feature in self.results for f in feature["attributes"].keys()}
+        if field_name not in available_fields:
+            return []  # gracefully return blank list if field not found
+        values = [feature["attributes"].get(field_name) for feature in self.results if feature["attributes"].get(field_name) is not None]
+        return list(set(values))

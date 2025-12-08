@@ -33,6 +33,19 @@ After uploading, carefully review the geometry displayed on the map.
 Make sure the location or route matches your project details.  
 Confirming accuracy at this stage is important because the geometry will be used in later steps for analysis and reporting.  
 If something looks incorrect, adjust or re‑upload before proceeding.
+
+---
+
+##### Step 4: Project Geographies
+Once geometry is successfully loaded into the app, the system will automatically process and query against four Alaska State geography layers:  
+- **House Districts**  
+- **Senate Districts**  
+- **Boroughs**  
+- **DOT&PF Regions**
+
+The results will be displayed as a list under **Project Geographies**.  
+Carefully review these values to ensure they are correct for your project.  
+If the districts or regions look wrong, adjust your geometry and reload before proceeding.
 """,
 
     "Project Information": """
@@ -81,13 +94,41 @@ Review the list for accuracy and completeness.
 When finished, continue to the next step in the workflow.
 """,
 
+    "Review": """
+##### Step 1: Review Entered Information
+Carefully review all information entered in previous steps.  
+The review will display in the following order:
+- **Project Name**  
+- **Submitted Project Geometry**  
+- **Project Geographies**  
+- **Project Information**  
+- **Contacts**
+
+---
+
+##### Step 2: Make Updates if Needed
+If any value needs to be changed, backtrack to the appropriate step and update the information.  
+Once updated, return to this tab to continue.
+
+---
+
+##### Step 3: Submit Project
+If all information is complete and correct, click **Submit**.  
+The application will process the submitted data and load it into the **APEX Database**.  
+Completion steps will appear as they are being performed.
+
+---
+
+##### Step 4: Confirmation
+If the data was submitted successfully, the application will notify you.  
+At that point, you may close the application or restart to add a new entry.
+""",
+
     "Other Tab Example": """
 #### Instructions
 Add instructions for other tabs here as needed.
 """
 }
-
-
 
 
 

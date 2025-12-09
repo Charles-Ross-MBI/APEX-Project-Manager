@@ -21,8 +21,16 @@ def draw_point():
     - Only marker drawing tool enabled.
     - Captures last drawn point and saves to session state.
     """
+
+    
+
     # Create map centered on Alaska
     m = folium.Map(location=[64.0000, -152.0000], zoom_start=4)
+
+    # ✅ If a point already exists, add the default marker
+    if st.session_state.get('selected_point'):
+        lat, lon = st.session_state['selected_point']
+        folium.Marker([lat, lon]).add_to(m)
 
     # Enable only marker drawing
     draw = Draw(
@@ -64,15 +72,26 @@ def draw_line():
     - Only polyline drawing tool enabled.
     - Captures last drawn line and saves to session state.
     """
+
     # Create map centered on Alaska
     m = folium.Map(location=[64.2008, -149.4937], zoom_start=4)
+
+    # ✅ If a route already exists, add it back to the map
+    if st.session_state.get('selected_route'):
+        route = st.session_state['selected_route']  # list of [lat, lon] pairs
+        folium.PolyLine(
+            route,
+            color="blue",
+            weight=4,
+            opacity=0.8
+        ).add_to(m)
 
     # Enable only polyline drawing
     draw = Draw(
         draw_options={
             "polyline": {
                 "shapeOptions": {
-                    "color": 'blue',   
+                    "color": 'blue',
                     "weight": 4,
                     "opacity": 0.8
                 }
@@ -100,5 +119,4 @@ def draw_line():
             coords = last["geometry"]["coordinates"]  # list of [lon, lat]
             # ✅ Reformat to [lat, lon] pairs, rounded
             formatted = [[round(lat, 6), round(lon, 6)] for lon, lat in coords]
-
             st.session_state.selected_route = formatted

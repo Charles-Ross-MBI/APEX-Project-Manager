@@ -8,19 +8,26 @@ from agol_util import get_unique_field_values
 def enter_latlng():
     st.write("")
 
+    # If a point already exists, use it as default values
+    existing_point = st.session_state.get("selected_point")
+    if existing_point:
+        default_lat, default_lon = existing_point
+    else:
+        default_lat, default_lon = 0.0, 0.0
+
     # Two columns for lat/lon inputs with labels above
     cols = st.columns(2)
     with cols[0]:
         lat_val = st.number_input(
             "Latitude",
-            value=0.0,
+            value=default_lat,
             format="%.6f",
             key="manual_lat"
         )
     with cols[1]:
         lon_val = st.number_input(
             "Longitude",
-            value=0.0,
+            value=default_lon,
             format="%.6f",
             key="manual_lon"
         )
@@ -32,7 +39,7 @@ def enter_latlng():
             st.session_state.selected_point = [round(lat_val, 6), round(lon_val, 6)]
 
             m = folium.Map(location=[lat_val, lon_val], zoom_start=6)
-            folium.Marker([lat_val, lon_val], popup="Selected Point").add_to(m)
+            folium.Marker([lat_val, lon_val]).add_to(m)  # default marker
 
             add_small_geocoder(m)
 

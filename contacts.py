@@ -45,16 +45,19 @@ def contacts_list():
         else:
             st.warning("⚠️ Please fill in all fields before adding.")
 
-
     st.write("")
     st.write("")
 
     st.markdown("<h5>Contacts List</h5>", unsafe_allow_html=True)
-    for i, contact in enumerate(st.session_state["contacts"]):
-        c1, c2 = st.columns([4, 1])
-        with c1:
-            st.write(f"{contact['Role']} - {contact['Name']} ({contact['Email']}, {contact['Phone']})")
-        with c2:
-            if st.button("Remove", key=f"remove_{i}"):
-                st.session_state["contacts"].pop(i)
-                st.rerun()
+    # ✅ Updated logic: always display existing contacts if they are already there
+    if st.session_state["contacts"]:
+        for i, contact in enumerate(st.session_state["contacts"]):
+            c1, c2 = st.columns([4, 1])
+            with c1:
+                st.write(f"{contact['Role']} - {contact['Name']} ({contact['Email']}, {contact['Phone']})")
+            with c2:
+                if st.button("Remove", key=f"remove_{i}"):
+                    st.session_state["contacts"].pop(i)
+                    st.rerun()
+    else:
+        st.info("No contacts added yet.")

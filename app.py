@@ -1,6 +1,7 @@
 
 import streamlit as st
 from streamlit_folium import st_folium
+from streamlit_scroll_to_top import scroll_to_here
 import folium
 from folium.plugins import Draw, Geocoder, Search
 import geopandas as gpd
@@ -25,6 +26,7 @@ st.set_page_config(page_title="Alaska DOT&PF - APEX Project Creator", page_icon=
 m = folium.Map(location=[64.2008, -149.4937], zoom_start=4)
 add_small_geocoder(m)
 
+
 # Initialize session state
 defaults = {
     "step": 1,
@@ -44,15 +46,34 @@ for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-TOTAL_STEPS = 5
+import streamlit as st
+from streamlit_scroll_to_top import scroll_to_here
 
+TOTAL_STEPS = 5
+if "step" not in st.session_state:
+    st.session_state.step = 1
+
+# --- Initialize scroll flags ---
+if "scroll_to_top" not in st.session_state:
+    st.session_state.scroll_to_top = False
+
+# --- Handle scroll action ---
+if st.session_state.scroll_to_top:
+    scroll_to_here(0, key="top")  # 0 = instant scroll
+    st.session_state.scroll_to_top = False  # reset after scrolling
+
+# --- Navigation functions ---
 def next_step():
     if st.session_state.step < TOTAL_STEPS:
         st.session_state.step += 1
+    st.session_state.scroll_to_top = True  # trigger scroll
 
 def prev_step():
     if st.session_state.step > 1:
         st.session_state.step -= 1
+    st.session_state.scroll_to_top = True  # trigger scroll
+
+
 
 # Header and progress
 st.title("📝 ADD NEW APEX PROJECT")
@@ -65,7 +86,7 @@ st.write("")
 if st.session_state.step == 1:
     st.header("Welcome")
     st.write("""
-        ##### Alaska DOT&PF APEX Project Creation
+        ##### Alaska DOT&PF APEX Project Creator
 
         Follow these steps to create a new project in the system:
 
@@ -164,40 +185,53 @@ elif st.session_state.step == 4:
     st.write("")
     st.write("")
 
-    # First: choose Site or Route
+    # --- Choose Site or Route ---
     st.markdown("<h5>Choose Project Type</h5>", unsafe_allow_html=True)
-    project_type = st.segmented_control(
+    st.session_state['project_type'] = st.segmented_control(
         "Select Project Type:",
         ["Site Project", "Route Project"],
-        default=None
+        default=st.session_state.get('project_type', None)  # persist previous choice
     )
-    st.session_state.project_type = project_type
 
-    # If project_type changed, clear all district values
-    if st.session_state.get("prev_project_type") != project_type:
+    # If project_type changed, clear all district values and geometry
+    if st.session_state.get("prev_project_type") != st.session_state['project_type']:
         st.session_state.house_string = ""
         st.session_state.senate_string = ""
         st.session_state.borough_string = ""
         st.session_state.region_string = ""
-        st.session_state.prev_project_type = project_type
+        st.session_state.selected_point = None
+        st.session_state.selected_route = None
+        st.session_state['option'] = None
+        st.session_state.prev_project_type = st.session_state['project_type']
 
     st.write("")
-    if project_type:
+    if st.session_state['project_type']:
         st.markdown("<h5>Upload Geospatial Data</h5>", unsafe_allow_html=True)
 
         show_awp_option = (
             st.session_state.info_option == "AASHTOWare Database"
-            and project_type.startswith("Site")
+            and st.session_state['project_type'].startswith("Site")
             and st.session_state.get("awp_dcml_latitude")
             and st.session_state.get("awp_dcml_longitude")
         )
 
-        if project_type.startswith("Site"):
+        # --- Site Project ---
+        if st.session_state['project_type'].startswith("Site"):
             options = ["Upload Shapefile", "Enter Latitude/Longitude", "Select Point on Map"]
             if show_awp_option:
-                options = options + ["AASHTOWare"]
+                options.append("AASHTOWare")
 
-            option = st.segmented_control("Choose Upload Method:", options, default=options[0])
+            # Ensure default is valid
+            prev_option = st.session_state.get('option')
+            if prev_option not in options:
+                prev_option = options[0]
+
+            st.session_state['option'] = st.segmented_control(
+                "Choose Upload Method:",
+                options,
+                default=prev_option
+            )
+            option = st.session_state['option']
 
             if st.session_state.get("geo_option") != option:
                 st.session_state.selected_point = None
@@ -217,9 +251,21 @@ elif st.session_state.step == 4:
                 enter_latlng()
                 st.session_state.selected_route = None
 
-        else:  # Route project
+        # --- Route Project ---
+        else:
             options = ["Upload Shapefile", "Enter Mileposts", "Draw Route on Map"]
-            option = st.segmented_control("Choose Upload Method:", options, default=options[0])
+
+            # Ensure default is valid
+            prev_option = st.session_state.get('option')
+            if prev_option not in options:
+                prev_option = options[0]
+
+            st.session_state['option'] = st.segmented_control(
+                "Choose Upload Method:",
+                options,
+                default=prev_option
+            )
+            option = st.session_state['option']
 
             if st.session_state.get("geo_option") != option:
                 st.session_state.selected_point = None
@@ -236,9 +282,7 @@ elif st.session_state.step == 4:
                 draw_line()
                 st.session_state.selected_point = None
 
-        st.write("")
-
-        # Initialize previous values
+        # --- Track previous values ---
         if "prev_selected_point" not in st.session_state:
             st.session_state.prev_selected_point = None
         if "prev_selected_route" not in st.session_state:
@@ -255,14 +299,14 @@ elif st.session_state.step == 4:
             st.session_state.prev_selected_point = point_val
             st.session_state.prev_selected_route = route_val
 
-        # Collect values
+        # --- Collect values ---
         house_val = st.session_state.get('house_string')
         senate_val = st.session_state.get('senate_string')
         borough_val = st.session_state.get('borough_string')
         region_val = st.session_state.get('region_string')
 
-        # Only show expander if current geometry type has content
-        if project_type.startswith("Site") and point_val is not None and any([house_val, senate_val, borough_val, region_val]):
+        # --- Show expander if geometry has content ---
+        if st.session_state['project_type'].startswith("Site") and point_val is not None and any([house_val, senate_val, borough_val, region_val]):
             with st.expander("PROJECT GEOGRAPHIES", expanded=True):
                 col1, col2 = st.columns(2)
                 col1.markdown(f"**House Districts:** {house_val or '—'}")
@@ -270,7 +314,7 @@ elif st.session_state.step == 4:
                 col1.markdown(f"**Boroughs:** {borough_val or '—'}")
                 col2.markdown(f"**Regions:** {region_val or '—'}")
 
-        elif project_type.startswith("Route") and route_val is not None and any([house_val, senate_val, borough_val, region_val]):
+        elif st.session_state['project_type'].startswith("Route") and route_val is not None and any([house_val, senate_val, borough_val, region_val]):
             with st.expander("PROJECT GEOGRAPHIES", expanded=True):
                 col1, col2 = st.columns(2)
                 col1.markdown(f"**House Districts:** {house_val or '—'}")
@@ -279,8 +323,6 @@ elif st.session_state.step == 4:
                 col2.markdown(f"**Regions:** {region_val or '—'}")
 
 
-
-       
 
 elif st.session_state.step == 5:
     st.markdown("### REVIEW & SUBMIT ✔️")
@@ -326,5 +368,6 @@ with cols[1]:
 
     if st.session_state.step < TOTAL_STEPS:
         st.button("Next ➡️", on_click=next_step, disabled=not can_proceed)
+
 
 st.caption("Use Back and Next to navigate. Refresh will reset this session.")

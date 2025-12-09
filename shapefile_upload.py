@@ -18,7 +18,8 @@ from map import add_small_geocoder, set_bounds_route, add_bottom_message
 def point_shapefile():
     st.write("")
     uploaded = st.file_uploader("Upload point shapefile (zip)", type=["zip"])
-        
+
+    # ✅ If a new file is uploaded, process and store it
     if uploaded:
         with tempfile.TemporaryDirectory() as tmpdir:
             zip_path = f"{tmpdir}/shapefile.zip"
@@ -35,21 +36,25 @@ def point_shapefile():
 
                 # Store selected point in session state
                 st.session_state.selected_point = [round(lat, 6), round(lon, 6)]
-
-                # Create map centered on the point
-                m = folium.Map(location=[lat, lon], zoom_start=10)
-                folium.Marker([lat, lon], tooltip="Uploaded Point").add_to(m)
-
-                add_small_geocoder(m)
-                st_folium(m, width=700, height=500)
+                st.session_state.point_shapefile_uploaded = True
             else:
                 st.warning("Uploaded shapefile is not point geometry.")
+                st.session_state.point_shapefile_uploaded = False
+
+    # ✅ If a point shapefile was uploaded earlier, display it again
+    if st.session_state.get("point_shapefile_uploaded") and st.session_state.get("selected_point"):
+        lat, lon = st.session_state.selected_point
+        m = folium.Map(location=[lat, lon], zoom_start=10)
+        folium.Marker([lat, lon], tooltip="Uploaded Point").add_to(m)
+        add_small_geocoder(m)
+        st_folium(m, width=700, height=500)
 
 
 def polyline_shapefile():
     st.write("")
     uploaded = st.file_uploader("Upload polyline shapefile (zip)", type=["zip"])
 
+    # ✅ If a new file is uploaded, process and store it
     if uploaded:
         with tempfile.TemporaryDirectory() as tmpdir:
             zip_path = f"{tmpdir}/shapefile.zip"
@@ -64,14 +69,16 @@ def polyline_shapefile():
                 coords = list(gdf.geometry.iloc[0].coords)
                 formatted = [[round(lat, 6), round(lon, 6)] for lon, lat in coords]
                 st.session_state.selected_route = formatted
-
-                # Create map centered on first coordinate
-                m = folium.Map(location=[coords[0][1], coords[0][0]], zoom_start=14)
-                folium.PolyLine([(y, x) for x, y in coords], color="blue").add_to(m)
-
-                add_small_geocoder(m)
-                m.fit_bounds(set_bounds_route(coords))
-
-                st_folium(m, width=700, height=500)
+                st.session_state.route_shapefile_uploaded = True
             else:
                 st.warning("Uploaded shapefile is not polyline geometry.")
+                st.session_state.route_shapefile_uploaded = False
+
+    # ✅ If a polyline shapefile was uploaded earlier, display it again
+    if st.session_state.get("route_shapefile_uploaded") and st.session_state.get("selected_route"):
+        coords = [(lon, lat) for lat, lon in st.session_state.selected_route]
+        m = folium.Map(location=[coords[0][1], coords[0][0]], zoom_start=14)
+        folium.PolyLine([(y, x) for x, y in coords], color="blue").add_to(m)
+        add_small_geocoder(m)
+        m.fit_bounds(set_bounds_route(coords))
+        st_folium(m, width=700, height=500)

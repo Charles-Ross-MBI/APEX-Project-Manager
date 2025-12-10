@@ -5,3 +5,4 @@ geopandas==0.14.4
 shapely==2.0.6
 numpy==1.26.4
 pandas==2.2.3
+streamlit_scroll_to_top

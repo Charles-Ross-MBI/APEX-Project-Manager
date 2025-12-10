@@ -135,25 +135,8 @@ elif st.session_state.step == 2:
     st.write("")
     st.write("")
 
-    st.markdown("<h5>Choose Source</h5>", unsafe_allow_html=True)
-    info_option = st.segmented_control(
-        "Choose Source Method:",
-        ["AASHTOWare Database", "User Input"],
-        default=None
-    )
-    st.session_state.info_option = info_option
+    project_details_form()
 
-    st.write("")
-
-    if info_option == "AASHTOWare Database":
-        st.markdown("<h5>Select Project & Complete Form</h5>", unsafe_allow_html=True)
-        aashtoware_project()
-    elif info_option == "User Input":
-        st.markdown("<h5>Complete Form</h5>", unsafe_allow_html=True)
-        project_details_form(is_awp=False)
-
-    st.write("")
-    st.write("")
 
 elif st.session_state.step == 3:
     st.markdown("### ADD CONTACTS 👥")

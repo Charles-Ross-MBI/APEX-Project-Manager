@@ -84,21 +84,21 @@ def review_information():
     st.markdown(f"<h3>{display_name}</h3>", unsafe_allow_html=True)
 
     # --- Map of Location ---
-    header_with_edit("PROJECT LOCATION", target_step=4, help="Edit geometry & geographies")
-    m = None
-    if st.session_state.get("selected_point"):
-        lat, lon = st.session_state.selected_point
-        m = folium.Map(location=[lat, lon], zoom_start=12)
-        folium.Marker([lat, lon], popup="Project Point").add_to(m)
-    elif st.session_state.get("selected_route"):
-        route = st.session_state.selected_route  # list of [lat, lon]
-        m = folium.Map(location=route[0], zoom_start=10)
-        folium.PolyLine(route, color="blue", weight=3).add_to(m)
-        # Convert [lat, lon] -> [lon, lat] for bounds helper
-        route_bounds = [(lon, lat) for (lat, lon) in st.session_state.selected_route]
-        m.fit_bounds(set_bounds_route(route_bounds))
-    if m:
-        st_folium(m, width=700, height=400)
+    
+def header_with_edit(title: str, target_step: int, *, help: str = None):
+    left, right = st.columns([1, 0.18])
+    with left:
+        st.markdown(f"#### {title}\n", unsafe_allow_html=True)
+    with right:
+        # Handle click outside a callback
+        is_clicked = st.button("✏️ EDIT", help=help, key=f"edit_{target_step}")
+
+    # React to click here (main script body), not in a callback
+    if is_clicked:
+        st.session_state["step"] = target_step
+        st.session_state["scroll_to_top"] = True
+        # No st.rerun() needed: the script reruns automatically after this interaction
+
 
     st.write("")
     st.write("")

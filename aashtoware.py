@@ -28,15 +28,15 @@ def aashtoware_point(lat: float, lon: float):
         )
 
     # Create map centered on the coordinates
-    m = folium.Map(location=[lat_val, lon_val], zoom_start=10)
-    folium.Marker([lat_val, lon_val], popup=f"Lat: {lat_val}, Lon: {lon_val}").add_to(m)
+    m = folium.Map(location=[lat, lon], zoom_start=10)
+    folium.Marker([lat, lon], icon=folium.Icon(color="red", icon="info-sign"), tooltip="Uploaded Point").add_to(m)
     add_small_geocoder(m)
     st_folium(m, width=700, height=500)
     
     # ✅ Update session_state if valid point
-    if lat_val and lon_val:
+    if lat and lon:
         try:
-            st.session_state["selected_point"] = [round(float(lat_val), 6), round(float(lon_val), 6)]
+            st.session_state["selected_point"] = [round(float(lat), 6), round(float(lon), 6)]
         except Exception:
             st.session_state["selected_point"] = None
 
@@ -61,28 +61,40 @@ def aashtoware_project():
     # Sorted labels for a stable and deterministic order
     labels = sorted(label_to_gid.keys())
 
+    # Insert a placeholder option at the top
+    placeholder_label = "— Select a project —"
+    labels = [placeholder_label] + labels
+
     # Versioned widget key so changing source/project forces a hard reset
     version = st.session_state.get("form_version", 0)
     widget_key = f"awp_project_select_{version}"
 
-    # Determine initial index exactly once per widget version:
-    # If we have a previously selected label and it's in the list, use that; otherwise 0.
+    # Determine initial index: if we have a previous label, use it; otherwise point to placeholder
     prev_label = st.session_state.get("aashto_label", None)
-    initial_index = labels.index(prev_label) if (prev_label in labels) else 0
+    if prev_label in labels:
+        initial_index = labels.index(prev_label)
+    else:
+        initial_index = 0  # default to placeholder
 
-    # --- on_change handler: persist selection + load AWP record + bump version ---
+    # --- on_change handler ---
     def _on_project_change():
-        selected_label = st.session_state[widget_key]  # current label chosen
-        selected_gid = label_to_gid.get(selected_label)
+        selected_label = st.session_state[widget_key]
+        if selected_label == placeholder_label:
+            # Reset session state if user chooses placeholder
+            st.session_state["aashto_label"] = None
+            st.session_state["aashto_id"] = None
+            st.session_state["aashto_selected_project"] = None
+            return
 
+        selected_gid = label_to_gid.get(selected_label)
         prev_gid = st.session_state.get("aashto_id")
-        # Persist selection immediately
+
         st.session_state["aashto_label"] = selected_label
         st.session_state["aashto_id"] = selected_gid
         st.session_state["aashto_selected_project"] = selected_label
 
         if selected_gid and selected_gid != prev_gid:
-            # Clear user-entered (non-awp) fields so the AWP values are authoritative
+            # Clear user-entered fields
             user_keys = [
                 "construction_year", "new_continuing", "proj_name", "iris", "stip",
                 "fed_proj_num", "fund_type", "proj_prac", "anticipated_start",
@@ -94,27 +106,25 @@ def aashtoware_project():
             for k in user_keys:
                 st.session_state[k] = "" if k not in ["award_date", "tenadd"] else None
 
-            # Load full AWP record and stash awp_* attributes
+            # Load full AWP record
             record = select_record(aashtoware, 0, "GlobalID", selected_gid)
             if record and "attributes" in record[0]:
                 attrs = record[0]["attributes"]
                 for k, v in attrs.items():
                     st.session_state[f"awp_{k.lower()}"] = v
 
-            # Signal change and bump form_version so dependent widgets reset
             st.session_state["awp_selection_changed"] = True
             st.session_state["form_version"] = st.session_state.get("form_version", 0) + 1
 
-    # Render the selectbox; let the widget manage its state via the versioned key.
-    # No dynamic 'default'—we only pass the initial index based on the current version.
+    # Render selectbox
     st.selectbox(
         "AASHTOWare Project List",
         labels,
         index=initial_index,
         key=widget_key,
         on_change=_on_project_change,
-        placeholder="Select Project",
     )
+
 
 
 

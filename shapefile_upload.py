@@ -12,7 +12,7 @@ import zipfile
 from streamlit_folium import st_folium
 import folium
 import geopandas as gpd
-from map import add_small_geocoder, set_bounds_route, add_bottom_message
+from map import add_small_geocoder, set_bounds_route, add_bottom_message, set_zoom
 
 
 def point_shapefile():
@@ -45,7 +45,7 @@ def point_shapefile():
     if st.session_state.get("point_shapefile_uploaded") and st.session_state.get("selected_point"):
         lat, lon = st.session_state.selected_point
         m = folium.Map(location=[lat, lon], zoom_start=10)
-        folium.Marker([lat, lon], tooltip="Uploaded Point").add_to(m)
+        folium.Marker([lat, lon], icon=folium.Icon(color="blue", icon="map-marker"), tooltip="Uploaded Point").add_to(m)
         add_small_geocoder(m)
         st_folium(m, width=700, height=500)
 
@@ -76,9 +76,17 @@ def polyline_shapefile():
 
     # ✅ If a polyline shapefile was uploaded earlier, display it again
     if st.session_state.get("route_shapefile_uploaded") and st.session_state.get("selected_route"):
-        coords = [(lon, lat) for lat, lon in st.session_state.selected_route]
-        m = folium.Map(location=[coords[0][1], coords[0][0]], zoom_start=14)
-        folium.PolyLine([(y, x) for x, y in coords], color="blue").add_to(m)
+        #coords = [(lon, lat) for lat, lon in st.session_state.selected_route]
+        coords = st.session_state['selected_route']
+        bounds = set_bounds_route(coords)
+        m = folium.Map(location=[coords[1][0], coords[1][0]], zoom_start=set_zoom(bounds))
+        # ✅ Updated PolyLine symbology
+        folium.PolyLine(
+            coords,                # list of [lat, lon] pairs
+            color="#3388ff",       # Leaflet default blue
+            weight=8,              # line thickness
+            opacity=1           # transparency
+        ).add_to(m)
         add_small_geocoder(m)
-        m.fit_bounds(set_bounds_route(coords))
+        m.fit_bounds(set_bounds_route(bounds))
         st_folium(m, width=700, height=500)

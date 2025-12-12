@@ -4,19 +4,34 @@ import datetime
 from agol_util import get_multiple_fields
 from aashtoware import aashtoware_project
 
+# --- Widget key helper ---
+def widget_key(name: str, version: int, is_awp: bool) -> str:
+    """
+    Build a per-source, per-version widget key so Streamlit treats AWP and UI
+    as distinct controls and doesn't retain values across source switches.
+
+    Result format:
+      - AASHTOWare: awp_widget_key_<name>_<version>
+      - User Input : ui_widget_key_<name>_<version>
+    """
+    prefix = "awp_widget_key" if is_awp else "ui_widget_key"
+    return f"{prefix}_{name}_{version}"
+
+
 # --- Helpers ---
 def session_selectbox(
     key: str,
     label: str,
     options: list,
     default_key: str = None,
-    force_str: bool = False
+    force_str: bool = False,
+    is_awp: bool = False,
 ):
     """
     Render a Streamlit selectbox that defaults to the current session_state value
     or to another session_state key passed in as default_key. If the default value
     is not in options, it will be added. Optionally convert the default value to str.
-    Uses versioned widget keys to allow hard resets on source/project switches.
+    Uses source-specific, versioned widget keys to allow hard resets on source/project switches.
     """
     version = st.session_state.get("form_version", 0)
 
@@ -25,39 +40,36 @@ def session_selectbox(
         default_value = st.session_state.get(default_key)
     else:
         default_value = st.session_state.get(key, options[0] if options else "")
-
     if force_str and default_value is not None:
         default_value = str(default_value)
 
     normalized_options = [str(opt) if force_str else opt for opt in options]
     if default_value not in normalized_options and default_value is not None:
         normalized_options = [default_value] + normalized_options
-
     default_index = normalized_options.index(default_value) if default_value in normalized_options else 0
 
+    # Use source-specific widget key
     st.session_state[key] = st.selectbox(
         label,
         normalized_options,
         index=default_index,
-        key=f"{key}_{version}"
+        key=widget_key(key, version, is_awp),
     )
     return st.session_state[key]
 
 
-def impacted_comms_select():
+def impacted_comms_select(is_awp: bool = False):
     """
     Multiselect for impacted communities.
     - Displays community names but stores both IDs and names in session_state.
     - Restores selection by mapping stored IDs -> names and falling back to stored names.
-    - Uses versioned widget key yet provides an explicit default to persist across versions.
+    - Uses source-specific, versioned widget key yet provides an explicit default to persist across versions.
     """
     version = st.session_state.get("form_version", 0)
-
     comms_url = (
         "https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/"
         "All_Alaska_Communities_Baker/FeatureServer"
     )
-
     # Expected shape: [{"OverallName": "...", "DCCED_CommunityId": "..."}]
     comms_list = get_multiple_fields(comms_url, 7, ["OverallName", "DCCED_CommunityId"]) or []
 
@@ -72,7 +84,6 @@ def impacted_comms_select():
     # Restore previous selections across reruns/version changes
     prev_ids = st.session_state.get("impact_comm_ids", []) or []
     prev_names = st.session_state.get("impact_comm_names", []) or []
-
     default_names_from_ids = [id_to_name[i] for i in prev_ids if i in id_to_name]
     default_names_fallback = [n for n in prev_names if n in name_to_id]
     default_names = default_names_from_ids or default_names_fallback
@@ -81,10 +92,9 @@ def impacted_comms_select():
         "Select communities:",
         options=sorted(name_to_id.keys()),
         default=sorted(default_names),
-        key=f"impact_comm_{version}",
-        help="Choose one or more communities impacted by the project."
+        key=widget_key("impact_comm", version, is_awp),
+        help="Choose one or more communities impacted by the project.",
     )
-
     selected_ids = [name_to_id[n] for n in selected_names if n in name_to_id]
 
     st.session_state["impact_comm_ids"] = selected_ids
@@ -94,9 +104,9 @@ def impacted_comms_select():
     return selected_ids
 
 
-# --------------------------
+# -----------------------------
 # Snapshotting utilities
-# --------------------------
+# -----------------------------
 _PERSISTED_KEYS = [
     "construction_year", "new_continuing", "proj_name", "iris", "stip", "fed_proj_num",
     "fund_type", "proj_prac", "anticipated_start", "anticipated_end",
@@ -108,12 +118,11 @@ _PERSISTED_KEYS = [
     # AWP-specific display fields:
     "awp_proj_name", "awp_proj_desc",
     # identifiers for re-population
-    "aashto_id", "aashto_label", "aashto_selected_project"
+    "aashto_id", "aashto_label", "aashto_selected_project",
 ]
-
 _SOURCE_SNAPSHOT_KEY = {
     "AASHTOWare Database": "saved_awp",
-    "User Input": "saved_user"
+    "User Input": "saved_user",
 }
 
 
@@ -137,11 +146,13 @@ def _preload_from_snapshot(source: str):
 
 
 # --- Main form wrapper ---
+
 def project_details_form():
     """
     Source selection (AASHTOWare vs User Input) using segmented_control.
     Forms render only when a selection is made. Resets/bump happen on source switches.
     """
+
     # Initialize once
     st.session_state.setdefault("form_version", 0)
     st.session_state.setdefault("prev_info_option", None)
@@ -149,17 +160,27 @@ def project_details_form():
 
     OPTIONS = ["AASHTOWare Database", "User Input"]
 
-    # NOTE: No default and no on_change; read the return value directly.
+    # --- Seed the segmented control from a previously submitted value ---
+    # If the user has submitted before, st.session_state['details_type'] holds their choice.
+    # Use it as the default ONLY if no current selection is set.
+    prior_choice = st.session_state.get("details_type")
+    if (
+        prior_choice in OPTIONS
+        and (st.session_state.get("info_option") is None or st.session_state.get("info_option") == "")
+    ):
+        st.session_state["info_option"] = prior_choice
+
+    # NOTE: No explicit default passed; the widget will use session_state['info_option'] if present.
     selection = st.segmented_control(
         "Choose Source Method:",
         OPTIONS,
         key="info_option",
         # selection_mode stays "single" (default)
     )
-
     st.write("")  # spacer
 
     current_option = selection  # value returned by the widget
+    st.session_state["current_option"] = selection
     previous_option = st.session_state.get("prev_info_option")
 
     # Handle source change immediately (outside any callback)
@@ -172,6 +193,13 @@ def project_details_form():
             st.session_state["aashto_id"] = ""
             st.session_state["aashto_label"] = ""
             st.session_state["aashto_selected_project"] = ""
+
+            # ALSO clear shared non-AWP keys so User Input starts fresh.
+            # We'll reload any prior user data from the 'saved_user' snapshot right after.
+            for k in _PERSISTED_KEYS:
+                if not k.startswith("awp_"):
+                    st.session_state[k] = ""
+
         elif current_option == "AASHTOWare Database":
             # Keep user-entered fields; AWP will prefill where applicable
             pass
@@ -192,16 +220,15 @@ def project_details_form():
         # ensure it increments form_version there to hard-reset widgets when needed.
         aashtoware_project()
         _render_original_form(is_awp=True)
-
     elif current_option == "User Input":
         st.markdown("<h5>Complete Form</h5>", unsafe_allow_html=True)
         _render_original_form(is_awp=False)
-
     else:
         st.info("Please choose a source method above to begin.")
 
 
-# --- Original form renderer with versioned keys ---
+
+# --- Original form renderer with source-specific, versioned keys ---
 def _render_original_form(is_awp: bool):
     version = st.session_state.get("form_version", 0)
     form_key = f"project_details_form_{version}"
@@ -228,7 +255,7 @@ def _render_original_form(is_awp: bool):
                 "Construction Year*",
                 cy_options,
                 index=(cy_options.index(current_cy) if current_cy in cy_options else 0),
-                key=f"construction_year_{version}"
+                key=widget_key("construction_year", version, is_awp),
             )
         with col2:
             nc_options = ["", "New", "Continuing"]
@@ -236,7 +263,7 @@ def _render_original_form(is_awp: bool):
             st.session_state["new_continuing"] = st.selectbox(
                 "New or Continuing?", nc_options,
                 index=(nc_options.index(current_nc) if current_nc in nc_options else 0),
-                key=f"new_continuing_{version}"
+                key=widget_key("new_continuing", version, is_awp),
             )
 
         # Project Names
@@ -246,19 +273,19 @@ def _render_original_form(is_awp: bool):
                 st.session_state["awp_proj_name"] = st.text_input(
                     "AASHTOWare Project Name",
                     value=val("awp_proj_name", "awp_name"),
-                    key=f"awp_proj_name_{version}"
+                    key=widget_key("awp_proj_name", version, is_awp),
                 )
             with c2:
                 st.session_state["proj_name"] = st.text_input(
                     "Public Project Name",
                     value=st.session_state.get("proj_name", ""),
-                    key=f"proj_name_{version}"
+                    key=widget_key("proj_name", version, is_awp),
                 )
         else:
             st.session_state["proj_name"] = st.text_input(
                 "Public Project Name",
                 value=st.session_state.get("proj_name", ""),
-                key=f"proj_name_{version}"
+                key=widget_key("proj_name", version, is_awp),
             )
 
         # Project Identifiers
@@ -267,19 +294,19 @@ def _render_original_form(is_awp: bool):
             st.session_state["iris"] = st.text_input(
                 "IRIS",
                 value=val("iris", "awp_iris_number"),
-                key=f"iris_{version}"
+                key=widget_key("iris", version, is_awp),
             )
         with col6:
             st.session_state["stip"] = st.text_input(
                 "STIP",
                 value=st.session_state.get("stip", ""),
-                key=f"stip_{version}"
+                key=widget_key("stip", version, is_awp),
             )
         with col7:
             st.session_state["fed_proj_num"] = st.text_input(
                 "Federal Project Number",
                 value=st.session_state.get("fed_proj_num", ""),
-                key=f"fed_proj_num_{version}"
+                key=widget_key("fed_proj_num", version, is_awp),
             )
 
         st.write("")
@@ -291,14 +318,16 @@ def _render_original_form(is_awp: bool):
                 key="fund_type",
                 label="Funding Type?",
                 options=(["", "FHWA", "FAA", "STATE", "OTHER"] if not is_awp else ["", "FHWY", "FHWA", "FAA", "STATE", "OTHER"]),
-                default_key=("awp_funding_type" if is_awp else None)
+                default_key=("awp_funding_type" if is_awp else None),
+                is_awp=is_awp,
             )
         with col14:
             st.session_state["proj_prac"] = session_selectbox(
                 key="proj_prac",
                 label="Project Practice?",
                 options=['', 'Highways', "Aviation", "Facilities", "Marine Highway", "Other"],
-                default_key=("awp_project_practice" if is_awp else None)
+                default_key=("awp_project_practice" if is_awp else None),
+                is_awp=is_awp,
             )
 
         st.write("")
@@ -310,14 +339,14 @@ def _render_original_form(is_awp: bool):
                 "Anticipated Start Date",
                 placeholder="MM-YYYY (07-2025)",
                 value=st.session_state.get("anticipated_start", ""),
-                key=f"anticipated_start_{version}"
+                key=widget_key("anticipated_start", version, is_awp),
             )
         with col11:
             st.session_state["anticipated_end"] = st.text_input(
                 "Anticipated End Date",
                 placeholder="MM-YYYY (07-2025)",
                 value=st.session_state.get("anticipated_end", ""),
-                key=f"anticipated_end_{version}"
+                key=widget_key("anticipated_end", version, is_awp),
             )
 
         st.write("")
@@ -334,7 +363,7 @@ def _render_original_form(is_awp: bool):
                 "Award Date",
                 format="MM/DD/YYYY",
                 value=default_award_date,
-                key=f"award_date_{version}"
+                key=widget_key("award_date", version, is_awp),
             )
         with col13:
             st.session_state["award_fiscal_year"] = session_selectbox(
@@ -342,13 +371,14 @@ def _render_original_form(is_awp: bool):
                 label="Awarded Fiscal Year",
                 options=["", "2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030"],
                 default_key=("awp_awardfederalfiscalyear" if is_awp else None),
-                force_str=is_awp
+                force_str=is_awp,
+                is_awp=is_awp,
             )
 
         st.session_state["contractor"] = st.text_input(
             "Awarded Contractor",
             value=val("contractor", "awp_contractor"),
-            key=f"contractor_{version}"
+            key=widget_key("contractor", version, is_awp),
         )
 
         col15, col16, col17 = st.columns(3)
@@ -356,19 +386,19 @@ def _render_original_form(is_awp: bool):
             st.session_state["awarded_amount"] = st.number_input(
                 "Awarded Amount",
                 value=val("awarded_amount", "awp_proposal_awardedamount", coerce_float=True),
-                key=f"awarded_amount_{version}"
+                key=widget_key("awarded_amount", version, is_awp),
             )
         with col16:
             st.session_state["current_contract_amount"] = st.number_input(
                 "Current Contract Amount",
                 value=val("current_contract_amount", "awp_contract_currentcontractamount", coerce_float=True),
-                key=f"current_contract_amount_{version}"
+                key=widget_key("current_contract_amount", version, is_awp),
             )
         with col17:
             st.session_state["amount_paid_to_date"] = st.number_input(
                 "Amount Paid to Date",
                 value=val("amount_paid_to_date", "awp_contract_amountpaidtodate", coerce_float=True),
-                key=f"amount_paid_to_date_{version}"
+                key=widget_key("amount_paid_to_date", version, is_awp),
             )
 
         # Tentative Advertise Date
@@ -381,7 +411,7 @@ def _render_original_form(is_awp: bool):
             "Tentative Advertise Date",
             format="MM/DD/YYYY",
             value=default_tenadd,
-            key=f"tenadd_{version}"
+            key=widget_key("tenadd", version, is_awp),
         )
 
         st.write("")
@@ -392,33 +422,33 @@ def _render_original_form(is_awp: bool):
                 "AASHTOWare Description",
                 height=200,
                 value=st.session_state.get("awp_project_description", ""),
-                key=f"awp_proj_desc_{version}"
+                key=widget_key("awp_proj_desc", version, is_awp),
             )
             st.session_state["proj_desc"] = st.text_area(
                 "Public Description",
                 height=200,
                 value=st.session_state.get("proj_desc", ""),
-                key=f"proj_desc_{version}"
+                key=widget_key("proj_desc", version, is_awp),
             )
         else:
             st.session_state["proj_desc"] = st.text_area(
                 "Description",
                 height=200,
                 value=st.session_state.get("proj_desc", ""),
-                key=f"proj_desc_{version}"
+                key=widget_key("proj_desc", version, is_awp),
             )
 
         st.session_state["proj_purp"] = st.text_area(
             "Purpose",
             height=200,
             value=st.session_state.get("proj_purp", ""),
-            key=f"proj_purp_{version}"
+            key=widget_key("proj_purp", version, is_awp),
         )
         st.session_state["proj_impact"] = st.text_area(
             "Impact",
             height=200,
             value=st.session_state.get("proj_impact", ""),
-            key=f"proj_impact_{version}"
+            key=widget_key("proj_impact", version, is_awp),
         )
 
         st.write("")
@@ -427,26 +457,25 @@ def _render_original_form(is_awp: bool):
         st.session_state["proj_web"] = st.text_input(
             "Project Website",
             value=st.session_state.get("proj_web", ""),
-            key=f"proj_web_{version}"
+            key=widget_key("proj_web", version, is_awp),
         )
         st.session_state["apex_mapper_link"] = st.text_input(
             "APEX Mapper",
             value=st.session_state.get("apex_mapper_link", ""),
-            key=f"apex_mapper_link_{version}"
+            key=widget_key("apex_mapper_link", version, is_awp),
         )
         st.session_state["apex_infosheet"] = st.text_input(
             "APEX Info Sheet",
             value=st.session_state.get("apex_infosheet", ""),
-            key=f"apex_infosheet_{version}"
+            key=widget_key("apex_infosheet", version, is_awp),
         )
 
         st.write("")
         st.write("")
         st.markdown("<h5>7. IMPACTED COMMUNITIES</h4>", unsafe_allow_html=True)
-        st.session_state["impact_comm"] = impacted_comms_select()
+        st.session_state["impact_comm"] = impacted_comms_select(is_awp=is_awp)
 
         st.write("")
-
         # Submit button
         submit_button = st.form_submit_button("Submit")
 
@@ -464,11 +493,13 @@ def _render_original_form(is_awp: bool):
                 st.success("Project Information Saved")
                 st.session_state["details_complete"] = True
                 st.session_state["project_details"] = required_fields
+                st.session_state['details_type'] = st.session_state['current_option']
 
-                # Preserve selected project label so the list repopulates on return
-                if is_awp:
-                    st.session_state["aashto_selected_project"] = st.session_state.get("aashto_label", "")
 
-                # Snapshot everything for this source so it persists across page navigation
-                current_source = st.session_state.get("info_option")
-                _snapshot_form(current_source)
+            # Preserve selected project label so the list repopulates on return
+            if is_awp:
+                st.session_state["aashto_selected_project"] = st.session_state.get("aashto_label", "")
+
+            # Snapshot everything for this source so it persists across page navigation
+            current_source = st.session_state.get("info_option")
+            _snapshot_form(current_source)

@@ -1,14 +1,12 @@
-
 # review.py
 import streamlit as st
 from streamlit_folium import st_folium
 import folium
-from map import set_bounds_route
+from map import set_bounds_route, set_zoom
 
-
-
-
+# ----------------------------------------------------------------------
 # Dialog for confirmation
+# ----------------------------------------------------------------------
 @st.dialog("Confirm Submission")
 def confirm_submit_dialog():
     st.write(
@@ -17,31 +15,20 @@ def confirm_submit_dialog():
     )
     st.write("**This action cannot be undone from this workflow.**")
 
-    # Two side-by-side buttons
     col_ok, col_cancel = st.columns(2)
 
     with col_ok:
-        # Blue primary confirm button
         if st.button("Confirm & Submit", type="primary"):
-            # TODO: call your final submission routine here
-            # e.g., save_to_apex(st.session_state)
             st.session_state["submitted"] = True
             st.success("Project submitted.")
-            # Optionally jump back to review or to a 'done' page
             st.session_state["step"] = 5
             st.session_state["scroll_to_top"] = True
             st.rerun()
 
     with col_cancel:
-        # Neutral gray cancel button
         if st.button("Cancel", type="secondary"):
-            # Just close the dialog
             st.session_state["show_confirm_dialog"] = False
             st.rerun()
-
-    
-
-
 
 
 # ----------------------------------------------------------------------
@@ -50,17 +37,21 @@ def confirm_submit_dialog():
 def goto_step(target_step: int):
     """Set the wizard step and rerun immediately."""
     st.session_state["step"] = target_step
-    # Keep UX consistent with your app's scroll behavior
     st.session_state["scroll_to_top"] = True
     st.rerun()
 
+
 def header_with_edit(title: str, target_step: int, *, help: str = None):
     """Render a left-aligned section header with a right-aligned EDIT button."""
-    left, right = st.columns([1, 0.18])  # adjust ratios to taste
+    left, right = st.columns([1, 0.18])
     with left:
         st.markdown(f"<h4 style='margin-bottom:0'>{title}</h4>", unsafe_allow_html=True)
     with right:
-        st.button("✏️ EDIT", help=help, on_click=goto_step, args=(target_step,))
+        is_clicked = st.button("✏️ EDIT", help=help, key=f"edit_{target_step}")
+    if is_clicked:
+        st.session_state["step"] = target_step
+        st.session_state["scroll_to_top"] = True
+        # Streamlit reruns automatically after button click
 
 
 # ----------------------------------------------------------------------
@@ -68,13 +59,7 @@ def header_with_edit(title: str, target_step: int, *, help: str = None):
 # ----------------------------------------------------------------------
 def review_information():
     """
-    Render the review page with section headers and a single EDIT button for Project Information.
-    Buttons navigate to the correct step in the wizard:
-      - Step 2: Project Information (includes Identification, Narrative, Funding, Timeline,
-                Impacted Communities, Status & Links)
-      - Step 3: Contacts
-      - Step 4: Project Location & Location Details
-      - Step 5: Review (this page)
+    Render the review page with section headers and edit buttons.
     """
 
     # --- Project Name ---
@@ -83,27 +68,41 @@ def review_information():
     display_name = project_name if project_name else awp_proj_name
     st.markdown(f"<h3>{display_name}</h3>", unsafe_allow_html=True)
 
+
     # --- Map of Location ---
-    
-def header_with_edit(title: str, target_step: int, *, help: str = None):
-    left, right = st.columns([1, 0.18])
-    with left:
-        st.markdown(f"#### {title}\n", unsafe_allow_html=True)
-    with right:
-        # Handle click outside a callback
-        is_clicked = st.button("✏️ EDIT", help=help, key=f"edit_{target_step}")
+    header_with_edit("PROJECT LOCATION", target_step=4, help="Edit Project Loaction")
+    if "selected_point" in st.session_state and st.session_state["selected_point"]:
+        # Swap lon, lat → lat, lon
+        lon, lat = st.session_state["selected_point"]
+        m = folium.Map(location=[lon, lat], zoom_start=12)
+        folium.Marker(
+            location=[lat, lon],
+            icon=folium.Icon(color="blue", icon="map-marker")
+        ).add_to(m)
+        st_folium(m, width=700, height=400)
 
-    # React to click here (main script body), not in a callback
-    if is_clicked:
-        st.session_state["step"] = target_step
-        st.session_state["scroll_to_top"] = True
-        # No st.rerun() needed: the script reruns automatically after this interaction
+    elif "selected_route" in st.session_state and st.session_state["selected_route"]:
+        BLUE = "#3388ff"
+        coords = st.session_state['selected_route']
+        bounds = set_bounds_route(coords)
+        m = folium.Map(location=[coords[0][1], coords[0][0]], zoom_start=set_zoom(bounds))
+        folium.PolyLine(
+            coords,
+            color=BLUE,
+            weight=8,
+            opacity=1
+        ).add_to(m)
+        m.fit_bounds(set_bounds_route( bounds))
+        st_folium(m, width=700, height=400)
+
+    else:
+        st.info("No location data available to display a map.")
 
 
     st.write("")
     st.write("")
 
-    # --- Project Information (single EDIT button for the whole section) ---
+    # --- Project Information ---
     header_with_edit("PROJECT INFORMATION", target_step=2, help="Edit all project information")
 
     # Identification
@@ -117,7 +116,7 @@ def header_with_edit(title: str, target_step: int, *, help: str = None):
         col2.markdown(f"**Federal Project Number:** {st.session_state.get('fed_proj_num','—')}")
         col1.markdown(f"**Practice:** {st.session_state.get('proj_prac','—')}")
 
-    # Narrative (Purpose, Description, Impact)
+    # Narrative
     with st.expander("Purpose, Description & Impact", expanded=True):
         st.markdown(f"**Purpose:**\n\n{st.session_state.get('proj_purp','—')}")
         if st.session_state.get("info_option") == "AASHTOWare Database":
@@ -127,7 +126,7 @@ def header_with_edit(title: str, target_step: int, *, help: str = None):
             st.markdown(f"**Project Description:**\n\n{st.session_state.get('proj_desc','—')}")
         st.markdown(f"**Impact:**\n\n{st.session_state.get('proj_impact','—')}")
 
-    # Funding (no separate EDIT button)
+    # Funding
     with st.expander("Funding", expanded=True):
         col1, col2 = st.columns(2)
         col1.markdown(f"**Fund Type:** {st.session_state.get('fund_type','—')}")
@@ -139,27 +138,27 @@ def header_with_edit(title: str, target_step: int, *, help: str = None):
         col1.markdown(
             "**Awarded Amount:** "
             + (("${:,.0f}".format(float(st.session_state.get("awarded_amount", 0))))
-               if st.session_state.get("awarded_amount") not in (None, "") else "")
+               if st.session_state.get("awarded_amount") not in (None, "") else "—")
         )
         col2.markdown(
             "**Current Contract Amount:** "
             + (("${:,.0f}".format(float(st.session_state.get("current_contract_amount", 0))))
-               if st.session_state.get("current_contract_amount") not in (None, "") else "")
+               if st.session_state.get("current_contract_amount") not in (None, "") else "—")
         )
         col1.markdown(
             "**Amount Paid to Date:** "
             + (("${:,.0f}".format(float(st.session_state.get("amount_paid_to_date", 0))))
-               if st.session_state.get("amount_paid_to_date") not in (None, "") else "")
+               if st.session_state.get("amount_paid_to_date") not in (None, "") else "—")
         )
         col2.markdown(f"**Tenadd:** {st.session_state.get('tenadd','—')}")
 
-    # Timeline (no separate EDIT button)
+    # Timeline
     with st.expander("Timeline", expanded=True):
         col1, col2 = st.columns(2)
         col1.markdown(f"**Anticipated Start:** {st.session_state.get('anticipated_start','—')}")
         col2.markdown(f"**Anticipated End:** {st.session_state.get('anticipated_end','—')}")
 
-    # Impacted Communities (no separate EDIT button)
+    # Impacted Communities
     with st.expander("Impacted Communities", expanded=True):
         impact_comm = st.session_state.get("impact_comm_names", "—")
         if isinstance(impact_comm, list):
@@ -168,7 +167,7 @@ def header_with_edit(title: str, target_step: int, *, help: str = None):
             impact_comm_display = impact_comm
         st.markdown(f"**Communities:** {impact_comm_display}")
 
-    # Status & Links (no separate EDIT button)
+    # Status & Links
     with st.expander("Status & Links", expanded=True):
         col1, col2 = st.columns(2)
         col1.markdown(f"**Project Website:** {st.session_state.get('proj_web','—')}")
@@ -180,7 +179,7 @@ def header_with_edit(title: str, target_step: int, *, help: str = None):
     st.write("")
     st.write("")
 
-    # --- Contacts (separate page -> keep EDIT) ---
+    # --- Contacts ---
     header_with_edit("CONTACTS", target_step=3, help="Edit project contacts")
     contacts = st.session_state.get("contacts", [])
     if contacts:
@@ -192,14 +191,10 @@ def header_with_edit(title: str, target_step: int, *, help: str = None):
     else:
         st.write("— No contacts provided —")
 
-    
-
-    # --- Submit button that opens the modal ---
     st.write("")
     st.write("")
 
+    # --- Submit button ---
     if st.button("SUBMIT PROJECT", type="primary"):
         st.session_state["show_confirm_dialog"] = True
         confirm_submit_dialog()
-
-

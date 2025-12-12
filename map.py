@@ -9,6 +9,7 @@ import streamlit as st
 from streamlit_folium import st_folium
 import folium
 from folium.plugins import Search, Draw, Geocoder
+import math
 
 
 def add_small_geocoder(fmap, position: str = "topright", width_px: int = 120, font_px: int = 12):
@@ -118,3 +119,26 @@ def add_bottom_message(m, message: str):
     </div>
     """
     m.get_root().html.add_child(folium.Element(message_html))
+
+
+
+def set_zoom(bounds):
+    """
+    Compute an approximate zoom level from the bounds,
+    using only the longitude span.
+    
+    Parameters:
+      bounds: [[min_lat, min_lon], [max_lat, max_lon]]
+    
+    Returns:
+      zoom: An approximate zoom level (integer)
+    """
+    min_lat, min_lon = bounds[0]
+    max_lat, max_lon = bounds[1]
+
+    delta_lon = abs(max_lon - min_lon)
+    if delta_lon == 0:
+        return 0  # Avoid division by zero; return a default zoom.
+    
+    zoom = math.log(360 / delta_lon, 2)
+    return int(zoom)

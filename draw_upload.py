@@ -15,7 +15,6 @@ from map import add_small_geocoder, set_bounds_route, set_zoom
 
 
 def draw_point():
-    st.write("")
     """
     Display a Folium map where the user can draw a point.
 
@@ -28,9 +27,8 @@ def draw_point():
     # Create map centered on Alaska
     m = folium.Map(location=[64.0000, -152.0000], zoom_start=4)
 
-    # FeatureGroup that Draw will edit
-    drawn_items = folium.FeatureGroup(name="drawn_items")
-    m.add_child(drawn_items)
+    # FeatureGroup for drawn items
+    drawn_items = folium.FeatureGroup(name="drawn_items").add_to(m)
 
     # ✅ Add stored point with the DEFAULT Leaflet icon (no custom icon specified)
     if st.session_state.get("selected_point"):
@@ -38,9 +36,8 @@ def draw_point():
         folium.Marker(location=[lat, lon]).add_to(drawn_items)
         m.fit_bounds([[lat, lon]])
 
-    # Wire Draw to the FeatureGroup; enable marker + edit/remove
+    # Add Draw control (no feature_group argument in folium>=0.17)
     draw = Draw(
-        feature_group=drawn_items,
         draw_options={
             "polyline": False,
             "polygon": False,
@@ -56,9 +53,6 @@ def draw_point():
     )
     draw.add_to(m)
 
-    # Add geocoder control
-    add_small_geocoder(m)
-
     # Render map in Streamlit
     output = st_folium(m, width=700, height=500, key="point_draw_map")
 
@@ -72,14 +66,7 @@ def draw_point():
 
 
 
-
-
-
-
-
-
 def draw_line():
-    st.write("")
     """
     Display a Folium map where the user can draw a line.
 
@@ -92,11 +79,10 @@ def draw_line():
     # Create map centered on Alaska
     m = folium.Map(location=[64.2008, -149.4937], zoom_start=4)
 
-    # FeatureGroup that Draw will edit
-    drawn_items = folium.FeatureGroup(name="drawn_items")
-    m.add_child(drawn_items)
+    # FeatureGroup for drawn items
+    drawn_items = folium.FeatureGroup(name="drawn_items").add_to(m)
 
-    
+    # Restore previously saved route if present
     if st.session_state.get("selected_route"):
         route = st.session_state["selected_route"]
         bounds = set_bounds_route(route)
@@ -112,10 +98,8 @@ def draw_line():
             ]
             m.fit_bounds(swapped_bounds)  # no explicit style -> default Draw style
 
-
-    # Wire Draw to the FeatureGroup; enable only polyline + edit/remove
+    # Add Draw control (no feature_group argument in folium>=0.17)
     draw = Draw(
-        feature_group=drawn_items,  # <-- key: pre-existing layers in this group are editable
         draw_options={
             "polyline": True,     # allow drawing lines
             "polygon": False,

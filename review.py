@@ -72,13 +72,9 @@ def review_information():
     # --- Map of Location ---
     header_with_edit("PROJECT LOCATION", target_step=4, help="Edit Project Loaction")
     if "selected_point" in st.session_state and st.session_state["selected_point"]:
-        # Swap lon, lat → lat, lon
-        lon, lat = st.session_state["selected_point"]
-        m = folium.Map(location=[lon, lat], zoom_start=12)
-        folium.Marker(
-            location=[lat, lon],
-            icon=folium.Icon(color="blue", icon="map-marker")
-        ).add_to(m)
+        lat, lon = st.session_state["selected_point"]
+        m = folium.Map(location=[lat, lon], zoom_start=12)
+        folium.Marker(location=[lat, lon]).add_to(m)
         st_folium(m, width=700, height=400)
 
     elif "selected_route" in st.session_state and st.session_state["selected_route"]:

@@ -45,7 +45,7 @@ def point_shapefile():
     if st.session_state.get("point_shapefile_uploaded") and st.session_state.get("selected_point"):
         lat, lon = st.session_state.selected_point
         m = folium.Map(location=[lat, lon], zoom_start=10)
-        folium.Marker([lat, lon], icon=folium.Icon(color="blue", icon="map-marker"), tooltip="Uploaded Point").add_to(m)
+        folium.Marker([lat, lon]).add_to(m)
         add_small_geocoder(m)
         st_folium(m, width=700, height=500)
 

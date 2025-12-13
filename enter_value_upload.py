@@ -38,7 +38,7 @@ def enter_latlng():
             # ✅ Store consistently as [lat, lon]
             st.session_state.selected_point = [round(lat_val, 6), round(lon_val, 6)]
 
-            m = folium.Map(location=[lat_val, lon_val], zoom_start=6)
+            m = folium.Map(location=[lat_val, lon_val], zoom_start=12)
             folium.Marker([lat_val, lon_val]).add_to(m)  # default marker
 
             add_small_geocoder(m)

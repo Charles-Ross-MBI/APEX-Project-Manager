@@ -44,7 +44,7 @@ def point_shapefile():
     # ✅ If a point shapefile was uploaded earlier, display it again
     if st.session_state.get("point_shapefile_uploaded") and st.session_state.get("selected_point"):
         lat, lon = st.session_state.selected_point
-        m = folium.Map(location=[lat, lon], zoom_start=10)
+        m = folium.Map(location=[lat, lon], zoom_start=12)
         folium.Marker([lat, lon]).add_to(m)
         add_small_geocoder(m)
         st_folium(m, width=700, height=500)

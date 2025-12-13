@@ -82,8 +82,12 @@ def enter_mileposts():
         )
 
         # Dropdowns for start and end mileposts (no default selected)
-        start = st.selectbox("Start Milepost", milepost_values, index=None, placeholder="Select Start MP")
-        end = st.selectbox("End Milepost", milepost_values, index=None, placeholder="Select End MP")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            start = st.selectbox("Start Milepost", milepost_values, index=None, placeholder="Select Start MP")
+        with col2:
+            end = st.selectbox("End Milepost", milepost_values, index=None, placeholder="Select End MP")
 
         if start is not None and end is not None:
             st.write('')

@@ -3,14 +3,14 @@ import requests
 import streamlit as st
 import logging
 
-import os
-from dotenv import load_dotenv
-load_dotenv()
-agol_username = os.getenv("AGOL_USERNAME")
-agol_password = os.getenv("AGOL_PASSWORD")
+# import os
+# from dotenv import load_dotenv
+# load_dotenv()
+# agol_username = os.getenv("AGOL_USERNAME")
+# agol_password = os.getenv("AGOL_PASSWORD")
 
-# agol_username = st.secrets["AGOL_USERNAME"]
-# agol_password = st.secrets["AGOL_PASSWORD"]
+agol_username = st.secrets["AGOL_USERNAME"]
+agol_password = st.secrets["AGOL_PASSWORD"]
 
 
 aashtoware = 'https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/AWP_PROJECTS_EXPORT_XYTableToPoint_ExportFeatures/FeatureServer'

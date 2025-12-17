@@ -18,14 +18,14 @@ def enter_latlng():
     # Two columns for lat/lon inputs with labels above
     cols = st.columns(2)
     with cols[0]:
-        lat_val = st.number_input(
+        lat = st.number_input(
             "Latitude",
             value=default_lat,
             format="%.6f",
             key="manual_lat"
         )
     with cols[1]:
-        lon_val = st.number_input(
+        lon = st.number_input(
             "Longitude",
             value=default_lon,
             format="%.6f",
@@ -33,12 +33,12 @@ def enter_latlng():
         )
 
     # Only show map if both values are non-zero
-    if lat_val != 0.0 and lon_val != 0.0:
+    if lat != 0.0 and lon != 0.0:
         try:
             # ✅ Store consistently as [lat, lon]
-            st.session_state.selected_point = [round(lat_val, 6), round(lon_val, 6)]
+            st.session_state.selected_point = [round(lat, 6), round(lon, 6)]
 
-            m = folium.Map(location=[lat_val, lon_val], zoom_start=12)
+            m = folium.Map(location=[lat, lon], zoom_start=12)
             folium.Marker([lat, lon], icon=folium.Icon(color="blue"), tooltip="Uploaded Point").add_to(m)
 
             add_small_geocoder(m)

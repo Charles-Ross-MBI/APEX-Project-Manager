@@ -106,22 +106,39 @@ The review will display in the following order:
 
 ---
 
-##### Step 2: Make Updates if Needed
+##### Step 2: Make Edits if Needed
 If any value needs to be changed, backtrack to the appropriate step and update the information.  
 Once updated, return to this tab to continue.
 
 ---
 
-##### Step 3: Submit Project
-If all information is complete and correct, click **Submit**.  
-The application will process the submitted data and load it into the **APEX Database**.  
-Completion steps will appear as they are being performed.
+##### Step 3: Finalize Review
+Ensure all information is correct and complete.  
+Once satisfied, you may proceed to the next page in the workflow.
+""",
+
+    "Upload Project": """
+##### Step 1: Upload to APEX
+Click the **UPLOAD TO APEX** button to begin transferring your project data.  
+This will load all information into the **APEX Database**.
 
 ---
 
-##### Step 4: Confirmation
-If the data was submitted successfully, the application will notify you.  
-At that point, you may close the application or restart to add a new entry.
+##### Step 2: Success Messages
+Each successful step in the upload process will display a **success message**.  
+This confirms that the data has been properly stored.
+
+---
+
+##### Step 3: Failure Messages
+If any part of the upload fails, the program will display a list of what failed.  
+Review the errors, correct the issues, and try uploading again.
+
+---
+
+##### Step 4: Completion
+Once all steps succeed, your project will be fully stored in the APEX Database.  
+You may then select **Finish** to reset the app and add another project or close the application.
 """,
 
     "Other Tab Example": """

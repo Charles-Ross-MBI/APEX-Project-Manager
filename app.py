@@ -333,7 +333,18 @@ elif st.session_state.step == 5:
 
 
 elif st.session_state.step == 6:
-    st.markdown("### UPLOADING PROJECT 🚀")
+    st.markdown("### UPLOAD PROJECT🚀")
+    st.write(
+    "Click **UPLOAD TO APEX** to begin transferring your project data. "
+    "Each successful step will display a success message confirming the upload. "
+    "If any step fails, the program will list the errors so you can correct them and try again. "
+    "Once all steps succeed, your project will be fully stored in the APEX Database."
+    )
+
+    instructions("Upload Project")
+
+    st.write("")
+    st.write("")
 
     # --- Upload Button in a container ---
     upload_container = st.empty()

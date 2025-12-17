@@ -53,6 +53,9 @@ def draw_point():
     )
     draw.add_to(m)
 
+    # Add geocoder control
+    add_small_geocoder(m)
+
     # Render map in Streamlit
     output = st_folium(m, width=700, height=500, key="point_draw_map")
 

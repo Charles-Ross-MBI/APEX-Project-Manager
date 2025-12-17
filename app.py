@@ -7,6 +7,7 @@ from folium.plugins import Draw, Geocoder, Search
 import geopandas as gpd
 import tempfile
 import zipfile
+import time
 
 from map import add_small_geocoder
 from shapefile_upload import point_shapefile, polyline_shapefile
@@ -18,6 +19,8 @@ from contacts import contacts_list
 from instructions import instructions
 from review import review_information
 from district_queries import run_district_queries
+from payloads import project_payload, communities_payload, geometry_payload, contacts_payload, geography_payload
+from agol_util import AGOLDataLoader, format_guid
 
 
 st.set_page_config(page_title="Alaska DOT&PF - APEX Project Creator", page_icon="📝", layout="centered")
@@ -49,7 +52,7 @@ for key, val in defaults.items():
 import streamlit as st
 from streamlit_scroll_to_top import scroll_to_here
 
-TOTAL_STEPS = 5
+TOTAL_STEPS = 6
 if "step" not in st.session_state:
     st.session_state.step = 1
 
@@ -192,11 +195,11 @@ elif st.session_state.step == 4:
         st.markdown("<h5>Upload Geospatial Data</h5>", unsafe_allow_html=True)
 
         show_awp_option = (
-            st.session_state.info_option == "AASHTOWare Database"
-            and st.session_state['project_type'].startswith("Site")
-            and st.session_state.get("awp_dcml_latitude")
-            and st.session_state.get("awp_dcml_longitude")
-        )
+        st.session_state['project_type'].startswith("Site")
+        and st.session_state.get("aashto_selected_project")
+        and st.session_state.get("awp_dcml_latitude")
+        and st.session_state.get("awp_dcml_longitude")
+    )
 
         # --- Site Project ---
         if st.session_state['project_type'].startswith("Site"):
@@ -322,35 +325,242 @@ elif st.session_state.step == 5:
     review_information()
 
     st.write("")
+    # st.write("")
+    # if st.button("Confirm & Submit", type="primary"):
+    #     st.session_state.step = 6
+    #     st.rerun()
 
-# Navigation controls with validation
+
+
+elif st.session_state.step == 6:
+    st.markdown("### UPLOADING PROJECT 🚀")
+
+    # --- Upload Button in a container ---
+    upload_container = st.empty()
+    if upload_container.button("UPLOAD TO APEX", type="primary", key="upload_apex_btn"):
+        # Clear the container immediately so the button disappears
+        upload_container.empty()
+
+        apex_url = "https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/service_ce928f8960394c63aa0bb2996c6eba4f/FeatureServer"
+        spinner_container = st.empty()
+
+        # --- Upload Project ---
+        with spinner_container, st.spinner("Loading Project to APEX..."):
+            try:
+                payload_project = project_payload()
+                projects_layer = 0
+                load_project = (
+                    AGOLDataLoader(url=apex_url, layer=projects_layer).add_features(payload_project)
+                    if payload_project
+                    else {"success": False, "message": "Failed to Load Project to APEX DB"}
+                )
+            except Exception as e:
+                load_project = {"success": False, "message": f"Project payload error: {e}"}
+
+        spinner_container.empty()
+
+        if load_project.get("success"):
+            st.session_state["apex_globalid"] = format_guid(load_project["globalids"])
+            st.success("LOAD PROJECT: SUCCESS ✅")
+        else:
+            st.error(f"LOAD PROJECT: FAILURE ❌ {load_project.get('message')}")
+            st.session_state.setdefault("step_failures", []).append(load_project.get("message"))
+
+        # --- Upload Geometry ---
+        with spinner_container, st.spinner("Loading Project Geometry to APEX..."):
+            try:
+                payload_geometry = geometry_payload(st.session_state.get("apex_globalid"))
+
+                if st.session_state.get("selected_point"):
+                    geometry_layer = 1
+                elif st.session_state.get("selected_route"):
+                    geometry_layer = 2
+
+                load_geometry = (
+                    AGOLDataLoader(url=apex_url, layer=geometry_layer).add_features(payload_geometry)
+                    if payload_geometry
+                    else {"success": False, "message": "Failed to Load Project geometry to APEX DB"}
+                )
+            except Exception as e:
+                load_geometry = {"success": False, "message": f"Project Geometry payload error: {e}"}
+
+        spinner_container.empty()
+
+        if load_geometry.get("success"):
+            st.success("LOAD GEOMETRY: SUCCESS ✅")
+        else:
+            st.error(f"LOAD GEOMETRY: FAILURE ❌  {load_geometry.get('message')}")
+            st.session_state.setdefault("step_failures", []).append(load_geometry.get("message"))
+
+        # --- Upload Communities ---
+        with spinner_container, st.spinner("Loading Communities to APEX..."):
+            try:
+                payload_communities = communities_payload(st.session_state.get("apex_globalid"))
+                communities_layer = 3
+
+                if payload_communities is None:
+                    load_communities = None
+                else:
+                    load_communities = AGOLDataLoader(
+                        url=apex_url, layer=communities_layer
+                    ).add_features(payload_communities)
+
+            except Exception as e:
+                load_communities = {"success": False, "message": f"Communities payload error: {e}"}
+
+        spinner_container.empty()
+
+        if load_communities is not None:
+            if load_communities.get("success"):
+                st.success("LOAD COMMUNITIES: SUCCESS ✅")
+            else:
+                st.error(f"LOAD COMMUNITIES: FAILURE ❌  {load_communities.get('message')}")
+                st.session_state.setdefault("step_failures", []).append(load_communities.get("message"))
+
+        # --- Upload Contacts ---
+        with spinner_container, st.spinner("Loading Contacts to APEX..."):
+            try:
+                payload_contacts = contacts_payload(st.session_state.get("apex_globalid"))
+                contacts_layer = 8
+
+                if payload_contacts is None:
+                    load_contacts = None
+                else:
+                    load_contacts = AGOLDataLoader(
+                        url=apex_url, layer=contacts_layer
+                    ).add_features(payload_contacts)
+
+            except Exception as e:
+                load_contacts = {"success": False, "message": f"Contacts payload error: {e}"}
+
+        spinner_container.empty()
+
+        if load_contacts is not None:
+            if load_contacts.get("success"):
+                st.success("LOAD CONTACTS: SUCCESS ✅")
+            else:
+                st.error(f"LOAD CONTACTS: FAILURE ❌  {load_contacts.get('message')}")
+                st.session_state.setdefault("step_failures", []).append(load_contacts.get("message"))
+
+        # --- Upload Geography ---
+        with spinner_container, st.spinner("Loading Geography to APEX..."):
+            geography_layers = {
+                "region": 4,
+                "borough": 5,
+                "senate": 6,
+                "house": 7
+            }
+
+            load_results = {}
+
+            try:
+                for name, layer_id in geography_layers.items():
+                    if f"{name}_list" in st.session_state:
+                        payload = geography_payload(
+                            st.session_state.get("apex_globalid"),
+                            name
+                        )
+                        if payload is None:
+                            load_results[name] = None
+                        else:
+                            load_results[name] = AGOLDataLoader(
+                                url=apex_url, layer=layer_id
+                            ).add_features(payload)
+
+            except Exception as e:
+                load_results["error"] = {"success": False, "message": f"Geography payload error: {e}"}
+
+        spinner_container.empty()
+
+        failed_layers = []
+        fail_messages = []
+
+        for name, result in load_results.items():
+            if result is not None and not result.get("success", True):
+                failed_layers.append(name.upper())
+                fail_messages.append(result.get("message"))
+
+        if failed_layers:
+            st.error(f"LOAD GEOGRAPHIES: FAILURE ❌\nFailed layers: {', '.join(failed_layers)}\nMessages: {', '.join(fail_messages)}")
+            st.session_state.setdefault("step_failures", []).extend(fail_messages)
+        else:
+            st.success("LOAD GEOGRAPHIES: SUCCESS ✅")
+
+        # --- Final check ---
+        if st.session_state.get("step_failures"):
+            st.warning("⚠️ Some steps failed during upload.")
+            delete_container = st.empty()
+            if delete_container.button("DELETE FROM APEX", type="primary", key="delete_apex_btn"):
+                delete_container.empty()
+                st.session_state["status_messages"].append("🗑️ Project deleted from APEX database due to failures")
+        else:
+            st.session_state['upload_complete'] = True
+            st.success("🎉 Upload finished! Project uploaded to APEX database.")
+
+
+
+
+
+
+
+
+# -----------------------------------------------------------------------------
+# Navigation controls
+# -----------------------------------------------------------------------------
 st.write("")
 cols = st.columns([1, 1, 4])
-with cols[0]:
-    st.button("⬅️ Back", on_click=prev_step, disabled=st.session_state.step == 1)
 
-with cols[1]:
-    can_proceed = False
+if st.session_state.step == 6:
+    # Hide Back/Next; show Finish only after upload completes
+    with cols[0]:
+        st.empty()
+    with cols[1]:
+        st.empty()
 
-    if st.session_state.step == 1:
-        can_proceed = True
-    elif st.session_state.step == 2:
-        can_proceed = st.session_state.get("details_complete", False)
-    elif st.session_state.step == 3:
-        can_proceed = True
-    elif st.session_state.step == 4:
-        if st.session_state.project_type:
-            if st.session_state.project_type.startswith("Site"):
-                can_proceed = st.session_state.selected_point is not None
+    if st.session_state.get("upload_complete", False):
+        if st.button("Finish", type="primary", key="finish_btn"):
+            # Reset relevant state and go to Step 1
+            st.session_state.step = 1
+            st.session_state.upload_clicked = False
+            st.session_state.delete_clicked = False
+            st.session_state.step_failures = []
+            st.session_state.status_messages = []
+            st.session_state.apex_globalid = None
+            st.session_state.details_complete = False
+            st.session_state.project_type = None
+            st.session_state.selected_point = None
+            st.session_state.selected_route = None
+
+            st.rerun()
+else:
+    # Back button
+    with cols[0]:
+        st.button("⬅️ Back", on_click=prev_step, disabled=st.session_state.step == 1)
+
+    # Determine forward action
+    with cols[1]:
+        can_proceed = False
+        if st.session_state.step == 1:
+            can_proceed = True
+        elif st.session_state.step == 2:
+            can_proceed = st.session_state.get("details_complete", False)
+        elif st.session_state.step == 3:
+            can_proceed = True
+        elif st.session_state.step == 4:
+            if st.session_state.project_type:
+                if st.session_state.project_type.startswith("Site"):
+                    can_proceed = st.session_state.selected_point is not None
+                else:
+                    can_proceed = st.session_state.selected_route is not None
             else:
-                can_proceed = st.session_state.selected_route is not None
-        else:
-            can_proceed = False
-    elif st.session_state.step == 5:
-        can_proceed = True
+                can_proceed = False
+        elif st.session_state.step == 5:
+            can_proceed = True
 
-    if st.session_state.step < TOTAL_STEPS:
-        st.button("Next ➡️", on_click=next_step, disabled=not can_proceed)
+        if st.session_state.step < TOTAL_STEPS:
+            # Always show Next ➡️, including Step 5
+            st.button("Next ➡️", on_click=next_step, disabled=not can_proceed)
 
+    # Only show caption when not on last step
+    st.caption("Use Back and Next to navigate. Refresh will reset this session.")
 
-st.caption("Use Back and Next to navigate. Refresh will reset this session.")

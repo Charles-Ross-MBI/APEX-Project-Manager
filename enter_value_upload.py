@@ -39,7 +39,7 @@ def enter_latlng():
             st.session_state.selected_point = [round(lat_val, 6), round(lon_val, 6)]
 
             m = folium.Map(location=[lat_val, lon_val], zoom_start=12)
-            folium.Marker([lat_val, lon_val]).add_to(m)  # default marker
+            folium.Marker([lat, lon], icon=folium.Icon(color="blue"), tooltip="Uploaded Point").add_to(m)
 
             add_small_geocoder(m)
 

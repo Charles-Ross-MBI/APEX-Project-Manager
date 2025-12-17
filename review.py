@@ -4,31 +4,32 @@ from streamlit_folium import st_folium
 import folium
 from map import set_bounds_route, set_zoom
 
-# ----------------------------------------------------------------------
-# Dialog for confirmation
-# ----------------------------------------------------------------------
-@st.dialog("Confirm Submission")
-def confirm_submit_dialog():
-    st.write(
-        "You're about to submit this project to the APEX database. "
-        "Please confirm all information has been reviewed."
-    )
-    st.write("**This action cannot be undone from this workflow.**")
+# # ----------------------------------------------------------------------
+# # Dialog for confirmation
+# # ----------------------------------------------------------------------
+# @st.dialog("Confirm Submission")
+# def confirm_submit_dialog():
+#     st.write(
+#         "You're about to submit this project to the APEX database. "
+#         "Please confirm all information has been reviewed."
+#     )
+#     st.write("**This action cannot be undone from this workflow.**")
 
-    col_ok, col_cancel = st.columns(2)
+#     col_ok, col_cancel = st.columns(2)
 
-    with col_ok:
-        if st.button("Confirm & Submit", type="primary"):
-            st.session_state["submitted"] = True
-            st.success("Project submitted.")
-            st.session_state["step"] = 5
-            st.session_state["scroll_to_top"] = True
-            st.rerun()
+#     with col_ok:
+#         if st.button("Confirm & Submit", type="primary"):
+#             st.session_state["show_confirm_dialog"] = False
+#             st.session_state.step = 6
+#             st.rerun()
+        
 
-    with col_cancel:
-        if st.button("Cancel", type="secondary"):
-            st.session_state["show_confirm_dialog"] = False
-            st.rerun()
+#     with col_cancel:
+#         if st.button("Cancel", type="secondary"):
+#             st.session_state["show_confirm_dialog"] = False
+#             st.rerun()
+
+
 
 
 # ----------------------------------------------------------------------
@@ -103,24 +104,20 @@ def review_information():
 
     # Identification
     with st.expander("Identification", expanded=True):
+        st.markdown(f"**Project Name:** {st.session_state.get('proj_name','')}")
         col1, col2 = st.columns(2)
         col1.markdown(f"**Construction Year:** {st.session_state.get('construction_year','')}")
-        col2.markdown(f"**New/Continuing:** {st.session_state.get('new_continuing','')}")
-        col1.markdown(f"**Public Project Name:** {st.session_state.get('public_proj_name','')}")
-        col2.markdown(f"**IRIS:** {st.session_state.get('iris','')}")
-        col1.markdown(f"**STIP:** {st.session_state.get('stip','')}")
-        col2.markdown(f"**Federal Project Number:** {st.session_state.get('fed_proj_num','')}")
-        col1.markdown(f"**Practice:** {st.session_state.get('proj_prac','')}")
-
-    # Narrative
-    with st.expander("Purpose, Description & Impact", expanded=True):
-        st.markdown(f"**Purpose:**\n\n{st.session_state.get('proj_purp','')}")
-        if st.session_state.get("info_option") == "AASHTOWare Database":
-            st.markdown(f"**AASHTOWare Description:**\n\n{st.session_state.get('awp_proj_desc','')}")
-            st.markdown(f"**Public Project Description:**\n\n{st.session_state.get('proj_desc','')}")
-        else:
-            st.markdown(f"**Project Description:**\n\n{st.session_state.get('proj_desc','')}")
-        st.markdown(f"**Impact:**\n\n{st.session_state.get('proj_impact','')}")
+        col2.markdown(f"**Phase:** {st.session_state.get('phase','')}")
+        col1.markdown(f"**IRIS:** {st.session_state.get('iris','')}")
+        col2.markdown(f"**STIP:** {st.session_state.get('stip','')}")
+        col1.markdown(f"**Federal Project Number:** {st.session_state.get('fed_proj_num','')}")
+        col2.markdown(f"**Practice:** {st.session_state.get('proj_prac','')}")
+        
+    # Timeline
+    with st.expander("Timeline", expanded=True):
+        col1, col2 = st.columns(2)
+        col1.markdown(f"**Anticipated Start:** {st.session_state.get('anticipated_start','')}")
+        col2.markdown(f"**Anticipated End:** {st.session_state.get('anticipated_end','')}")
 
     # Funding
     with st.expander("Funding", expanded=True):
@@ -148,11 +145,34 @@ def review_information():
         )
         col2.markdown(f"**Tenative Advertise Date:** {st.session_state.get('tenadd','')}")
 
-    # Timeline
-    with st.expander("Timeline", expanded=True):
+
+    # Narrative
+    with st.expander("Purpose, Description & Impact", expanded=True):
+        
+        if st.session_state.get("info_option") == "AASHTOWare Database":
+            st.markdown(f"**AASHTOWare Description:**\n\n{st.session_state.get('awp_proj_desc','')}")
+            st.markdown(f"**Public Project Description:**\n\n{st.session_state.get('proj_desc','')}")
+        else:
+            st.markdown(f"**Project Description:**\n\n{st.session_state.get('proj_desc','')}")
+        st.markdown(f"**Project Purpose:**\n\n{st.session_state.get('proj_purp','')}")
+        st.markdown(f"**Current Traffic Impact:**\n\n{st.session_state.get('proj_impact','')}")
+
+
+    # Status & Links
+    with st.expander("Links", expanded=True):
         col1, col2 = st.columns(2)
-        col1.markdown(f"**Anticipated Start:** {st.session_state.get('anticipated_start','')}")
-        col2.markdown(f"**Anticipated End:** {st.session_state.get('anticipated_end','')}")
+        col1.markdown(f"**Project Website:** {st.session_state.get('proj_web','—')}")
+        col2.markdown(f"**APEX Mapper Link:** {st.session_state.get('apex_mapper_link','—')}")
+        col1.markdown(f"**APEX Info Sheet:** {st.session_state.get('apex_infosheet','—')}")
+
+    
+     # Timeline
+    with st.expander("Geography", expanded=True):
+        col1, col2 = st.columns(2)
+        col1.markdown(f"**House Districts:** {st.session_state.get('house_string','')}")
+        col2.markdown(f"**Senate Districts:** {st.session_state.get('senate_string','')}")
+        col1.markdown(f"**Borough/Census Area:** {st.session_state.get('borough_string','')}")
+        col2.markdown(f"**DOT&PF Region:** {st.session_state.get('region_string','')}")
 
     # Impacted Communities
     with st.expander("Impacted Communities", expanded=True):
@@ -163,12 +183,7 @@ def review_information():
             impact_comm_display = impact_comm
         st.markdown(f"**Communities:** {impact_comm_display}")
 
-    # Status & Links
-    with st.expander("Status & Links", expanded=True):
-        col1, col2 = st.columns(2)
-        col1.markdown(f"**Project Website:** {st.session_state.get('proj_web','—')}")
-        col2.markdown(f"**APEX Mapper Link:** {st.session_state.get('apex_mapper_link','—')}")
-        col1.markdown(f"**APEX Info Sheet:** {st.session_state.get('apex_infosheet','—')}")
+    
 
     st.write("")
     st.write("")
@@ -188,7 +203,8 @@ def review_information():
     st.write("")
     st.write("")
 
-    # --- Submit button ---
-    if st.button("SUBMIT PROJECT", type="primary"):
-        st.session_state["show_confirm_dialog"] = True
-        confirm_submit_dialog()
+    # # --- Submit button ---
+    # if st.button("SUBMIT PROJECT", type="primary"):
+    #     st.session_state["show_confirm_dialog"] = True
+        
+    #     confirm_submit_dialog()

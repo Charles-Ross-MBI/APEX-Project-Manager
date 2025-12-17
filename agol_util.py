@@ -3,19 +3,40 @@ import requests
 import streamlit as st
 import logging
 
-# import os
-# from dotenv import load_dotenv
-# load_dotenv()
-# agol_username = os.getenv("AGOL_USERNAME")
-# agol_password = os.getenv("AGOL_PASSWORD")
+import os
+from dotenv import load_dotenv
+load_dotenv()
+agol_username = os.getenv("AGOL_USERNAME")
+agol_password = os.getenv("AGOL_PASSWORD")
 
-agol_username = st.secrets["AGOL_USERNAME"]
-agol_password = st.secrets["AGOL_PASSWORD"]
+# agol_username = st.secrets["AGOL_USERNAME"]
+# agol_password = st.secrets["AGOL_PASSWORD"]
 
 
 aashtoware = 'https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/AWP_PROJECTS_EXPORT_XYTableToPoint_ExportFeatures/FeatureServer'
 mileposts = 'https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/AKDOT_Routes_Mileposts/FeatureServer'
 
+
+def format_guid(value) -> str:
+    """
+    Ensures a GUID/GlobalID value is in the correct ArcGIS format.
+    Accepts either a string or a single-element list of strings.
+    """
+    # If it's a list, take the first element
+    if isinstance(value, list):
+        if not value:  # empty list
+            return None
+        value = value[0]
+
+    if not value or not isinstance(value, str):
+        return None
+
+    clean_value = value.strip().lstrip("{").rstrip("}")
+    parts = clean_value.split("-")
+    if len(parts) != 5 or not all(parts):
+        return None
+
+    return f"{{{clean_value}}}"
 
 
 def get_agol_token() -> str:
@@ -214,7 +235,7 @@ def get_multiple_fields(url: str, layer: int = 0, fields: list = None) -> list:
 
 
 
-def select_record(url: str, layer: int, id_field: str, id_value: str):
+def select_record(url: str, layer: int, id_field: str, id_value: str, fields = "*", return_geometry = False):
     """
     Queries an ArcGIS REST API table layer to retrieve a single record by ID field.
 
@@ -234,8 +255,9 @@ def select_record(url: str, layer: int, id_field: str, id_value: str):
 
         params = {
             "where": f"{id_field}='{id_value}'",
-            "outFields": "*",
-            "returnGeometry": "false",
+            "outFields": fields,
+            "returnGeometry": str(return_geometry).lower(),
+            "outSR": 4326,
             "f": "json",
             "token": token
         }
@@ -379,3 +401,95 @@ class AGOLQueryIntersect:
             return []  # gracefully return blank list if field not found
         values = [feature["attributes"].get(field_name) for feature in self.results if feature["attributes"].get(field_name) is not None]
         return list(set(values))
+    
+
+
+
+class AGOLDataLoader:
+    def __init__(self, url: str, layer: int):
+        """
+        Initialize the loader with AGOL service URL and layer ID.
+        Token is retrieved via _authenticate().
+        """
+        self.url = url.rstrip("/")
+        self.layer = layer
+        self.token = self._authenticate()
+        self.success = False
+        self.message = None
+        self.globalids = []
+        
+        # Configure logging
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger("AGOLDataLoader")
+
+    def _authenticate(self):
+        """
+        Authenticate with AGOL and return a valid token.
+        """
+        token = get_agol_token()
+        if not token:
+            raise ValueError("Authentication failed: Invalid token.")
+        return token
+
+    def add_features(self, payload: dict):
+        """
+        Add features to the AGOL feature layer using applyEdits.
+        Logs stages and sets success/message/globalids.
+        Rolls back if unsuccessful.
+        """
+        endpoint = f"{self.url}/{self.layer}/applyEdits"
+        self.logger.info("Starting add_features process...")
+
+        try:
+            # Use data= and json.dumps for adds
+            resp = requests.post(
+                endpoint,
+                data={
+                    "f": "json",
+                    "token": self.token,
+                    "adds": json.dumps(payload["adds"])
+                }
+            )
+            self.logger.info("Raw response text: %s", resp.text)
+            result = resp.json()
+
+            if "addResults" in result:
+                add_results = result["addResults"]
+                failures = [r for r in add_results if not r.get("success")]
+
+                if failures:
+                    self.success = False
+                    error_messages = []
+                    for r in failures:
+                        err = r.get("error")
+                        if err:
+                            error_messages.append(
+                                f"Code {err.get('code')}: {err.get('description')}"
+                            )
+                    self.message = (
+                        f"Failed to add {len(failures)} feature(s). "
+                        f"Errors: {', '.join(error_messages)}"
+                    )
+                    self.logger.error(self.message)
+                else:
+                    self.success = True
+                    self.message = "All features added successfully."
+                    self.globalids = [
+                        r.get("globalId") for r in add_results if r.get("success")
+                    ]
+                    self.logger.info(self.message)
+            else:
+                self.success = False
+                self.message = f"Unexpected response: {result}"
+                self.logger.error(self.message)
+
+        except Exception as e:
+            self.success = False
+            self.message = f"Error during add_features: {str(e)}"
+            self.logger.exception(self.message)
+
+        return {
+            "success": self.success,
+            "message": self.message,
+            "globalids": self.globalids
+        }

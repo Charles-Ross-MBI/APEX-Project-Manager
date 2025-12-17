@@ -29,7 +29,7 @@ def aashtoware_point(lat: float, lon: float):
 
     # Create map centered on the coordinates
     m = folium.Map(location=[lat, lon], zoom_start=10)
-    folium.Marker([lat, lon], icon=folium.Icon(color="red", icon="info-sign"), tooltip="Uploaded Point").add_to(m)
+    folium.Marker([lat, lon], icon=folium.Icon(color="blue"), tooltip="Uploaded Point").add_to(m)
     add_small_geocoder(m)
     st_folium(m, width=700, height=500)
     

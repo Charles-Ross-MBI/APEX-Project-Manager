@@ -98,7 +98,7 @@ def impacted_comms_select(is_awp: bool = False):
     selected_ids = [name_to_id[n] for n in selected_names if n in name_to_id]
 
     st.session_state["impact_comm_ids"] = selected_ids
-    st.session_state["impact_comm_names"] = selected_names
+    st.session_state["impact_comm_names"] = ",".join(selected_names)
     st.session_state["impact_comm"] = selected_ids  # compatibility
 
     return selected_ids
@@ -108,7 +108,7 @@ def impacted_comms_select(is_awp: bool = False):
 # Snapshotting utilities
 # -----------------------------
 _PERSISTED_KEYS = [
-    "construction_year", "new_continuing", "proj_name", "iris", "stip", "fed_proj_num",
+    "construction_year", "phase", "proj_name", "iris", "stip", "fed_proj_num",
     "fund_type", "proj_prac", "anticipated_start", "anticipated_end",
     "award_date", "award_fiscal_year", "contractor",
     "awarded_amount", "current_contract_amount", "amount_paid_to_date",
@@ -246,26 +246,7 @@ def _render_original_form(is_awp: bool):
         return v
 
     with st.form(form_key):
-        st.markdown("<h5>1. CONSTRUCTION YEAR, PROJECT NAMES, & IDS</h4>", unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
-        with col1:
-            cy_options = ['', 'CY2025', 'CY2026', 'CY2027', 'CY2028', 'CY2029', 'CY2030']
-            current_cy = st.session_state.get("construction_year", '')
-            st.session_state["construction_year"] = st.selectbox(
-                "Construction Year*",
-                cy_options,
-                index=(cy_options.index(current_cy) if current_cy in cy_options else 0),
-                key=widget_key("construction_year", version, is_awp),
-            )
-        with col2:
-            nc_options = ["", "New", "Continuing"]
-            current_nc = st.session_state.get("new_continuing", '')
-            st.session_state["new_continuing"] = st.selectbox(
-                "New or Continuing?", nc_options,
-                index=(nc_options.index(current_nc) if current_nc in nc_options else 0),
-                key=widget_key("new_continuing", version, is_awp),
-            )
-
+        st.markdown("<h5>1. PROJECT NAME </h4>", unsafe_allow_html=True)
         # Project Names
         if is_awp:
             c1, c2 = st.columns(2)
@@ -277,15 +258,36 @@ def _render_original_form(is_awp: bool):
                 )
             with c2:
                 st.session_state["proj_name"] = st.text_input(
-                    "Public Project Name",
+                    "Public Project Name*",
                     value=st.session_state.get("proj_name", ""),
                     key=widget_key("proj_name", version, is_awp),
                 )
         else:
             st.session_state["proj_name"] = st.text_input(
-                "Public Project Name",
+                "Public Project Name*",
                 value=st.session_state.get("proj_name", ""),
                 key=widget_key("proj_name", version, is_awp),
+            )
+        st.write("")
+
+        st.markdown("<h5>2. CONSTRUCTION YEAR, PHASE, & IDS</h4>", unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            cy_options = ['', 'CY2025', 'CY2026', 'CY2027', 'CY2028', 'CY2029', 'CY2030']
+            current_cy = st.session_state.get("construction_year", '')
+            st.session_state["construction_year"] = st.selectbox(
+                "Construction Year*",
+                cy_options,
+                index=(cy_options.index(current_cy) if current_cy in cy_options else 0),
+                key=widget_key("construction_year", version, is_awp),
+            )
+        with col2:
+            phase_options = ['', "Planning", "Construction"]
+            current_phase = st.session_state.get('phase', '')
+            st.session_state["phase"] = st.selectbox(
+                "Phase*", phase_options,
+                index=(phase_options.index(current_phase) if current_phase in phase_options else 0),
+                key=widget_key("phase", version, is_awp),
             )
 
         # Project Identifiers
@@ -311,11 +313,11 @@ def _render_original_form(is_awp: bool):
 
         st.write("")
         st.write("")
-        st.markdown("<h5>2. FUNDING TYPE & PRACTICE</h4>", unsafe_allow_html=True)
+        st.markdown("<h5>3. FUNDING TYPE & PRACTICE</h4>", unsafe_allow_html=True)
         col13, col14 = st.columns(2)
         with col13:
             st.session_state["fund_type"] = session_selectbox(
-                key="fund_type",
+                key="fund_type*",
                 label="Funding Type?",
                 options=(["", "FHWA", "FAA", "STATE", "OTHER"] if not is_awp else ["", "FHWY", "FHWA", "FAA", "STATE", "OTHER"]),
                 default_key=("awp_funding_type" if is_awp else None),
@@ -323,7 +325,7 @@ def _render_original_form(is_awp: bool):
             )
         with col14:
             st.session_state["proj_prac"] = session_selectbox(
-                key="proj_prac",
+                key="proj_prac*",
                 label="Project Practice?",
                 options=['', 'Highways', "Aviation", "Facilities", "Marine Highway", "Other"],
                 default_key=("awp_project_practice" if is_awp else None),
@@ -332,7 +334,7 @@ def _render_original_form(is_awp: bool):
 
         st.write("")
         st.write("")
-        st.markdown("<h5>3. START & END DATE</h4>", unsafe_allow_html=True)
+        st.markdown("<h5>4. START & END DATE</h4>", unsafe_allow_html=True)
         col10, col11 = st.columns(2)
         with col10:
             st.session_state["anticipated_start"] = st.text_input(
@@ -351,7 +353,7 @@ def _render_original_form(is_awp: bool):
 
         st.write("")
         st.write("")
-        st.markdown("<h5>4. AWARD INFORMATION</h4>", unsafe_allow_html=True)
+        st.markdown("<h5>5. AWARD INFORMATION</h4>", unsafe_allow_html=True)
         col12, col13 = st.columns(2)
         with col12:
             stored_award_date = st.session_state.get("award_date", None)
@@ -416,7 +418,7 @@ def _render_original_form(is_awp: bool):
 
         st.write("")
         st.write("")
-        st.markdown("<h5>5. DESCRIPTIONS, IMPACTS, PURPOSE</h4>", unsafe_allow_html=True)
+        st.markdown("<h5>6. DESCRIPTIONS, IMPACTS, PURPOSE</h4>", unsafe_allow_html=True)
         if is_awp:
             st.session_state["awp_proj_desc"] = st.text_area(
                 "AASHTOWare Description",
@@ -439,13 +441,13 @@ def _render_original_form(is_awp: bool):
             )
 
         st.session_state["proj_purp"] = st.text_area(
-            "Purpose",
+            "Project Purpose",
             height=200,
             value=st.session_state.get("proj_purp", ""),
             key=widget_key("proj_purp", version, is_awp),
         )
         st.session_state["proj_impact"] = st.text_area(
-            "Impact",
+            "Current Traffic Impact",
             height=200,
             value=st.session_state.get("proj_impact", ""),
             key=widget_key("proj_impact", version, is_awp),
@@ -453,7 +455,7 @@ def _render_original_form(is_awp: bool):
 
         st.write("")
         st.write("")
-        st.markdown("<h5>6. WEB LINKS</h4>", unsafe_allow_html=True)
+        st.markdown("<h5>7. WEB LINKS</h4>", unsafe_allow_html=True)
         st.session_state["proj_web"] = st.text_input(
             "Project Website",
             value=st.session_state.get("proj_web", ""),
@@ -472,7 +474,7 @@ def _render_original_form(is_awp: bool):
 
         st.write("")
         st.write("")
-        st.markdown("<h5>7. IMPACTED COMMUNITIES</h4>", unsafe_allow_html=True)
+        st.markdown("<h5>8. IMPACTED COMMUNITIES</h4>", unsafe_allow_html=True)
         st.session_state["impact_comm"] = impacted_comms_select(is_awp=is_awp)
 
         st.write("")
@@ -483,6 +485,9 @@ def _render_original_form(is_awp: bool):
         if submit_button:
             required_fields = {
                 "Construction Year": st.session_state.get("construction_year"),
+                "Project Name": st.session_state.get("proj_name"),
+                "Description": st.session_state.get("proj_desc")
+
             }
             missing_fields = [field for field, value in required_fields.items() if not value]
             if missing_fields:

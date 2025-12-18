@@ -348,7 +348,7 @@ elif st.session_state.step == 6:
     st.write("")
 
     # ✅ Back + Upload buttons appear together BEFORE upload starts
-    col_back, col_upload = st.columns([1, 2])   # wider upload column
+    col_back, col_upload, _ = st.columns([0.8, 1.2, 6])   # wider upload column
 
     if not st.session_state.get("upload_clicked", False):
 

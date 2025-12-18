@@ -535,7 +535,8 @@ elif st.session_state.step == 6:
         else:
             st.session_state['upload_complete'] = True
             st.write("")
-            st.markdown( """ <h5 style="font-size:24px; font-weight:600;"> ✅ Upload Finished! Refresh the page to <span style="font-weight:700;">add a new project</span>. </h5> """, unsafe_allow_html=True )
+            st.write("")
+            st.markdown( """ <h5 style="font-size:18px; font-weight:600;"> ✅ Upload Finished! Refresh the page to <span style="font-weight:700;">add a new project</span>. </h5> """, unsafe_allow_html=True )
 
 
 

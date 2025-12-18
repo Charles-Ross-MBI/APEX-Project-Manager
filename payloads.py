@@ -127,8 +127,8 @@ def project_payload():
                         "Anticipated_End": st.session_state.get("anticipated_end", None),
                         "Construction_Year": st.session_state.get("construction_year", None),
                         "New_Continuing": st.session_state.get("new_continuing", None),
-                        "Route_ID": st.session_state.get("route_id", None),
-                        "Route_Name": st.session_state.get("route_name", None),
+                        "Route_ID": st.session_state.get("route_ids", None),
+                        "Route_Name": st.session_state.get("route_names", None),
                         "Impact_Comm": st.session_state.get("impact_comm_names", None),
                         "DOT_PF_Region": st.session_state.get("region_string", None),
                         "Borough_Census_Area": st.session_state.get("borough_string", None),
@@ -354,32 +354,18 @@ def geography_payload(globalid: str, name: str):
         "house": {
             "url": "https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/STIP_HouseDistricts/FeatureServer",
             "layer": 0
+        },
+        "route": {
+            "url": "https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/AKDOT_Routes_Mileposts/FeatureServer",
+            "layer": 0
         }
     }
 
-    # Dictionary of GlobalID lists keyed by geography type
-    geography_lists = {
-        "region_list": ['6382abe1-e0b8-449b-a25d-368d2e21d3ee'],
-        "borough_list": [
-            'e9262b65-4092-41f3-9f09-75774544a474',
-            'f1796568-baa6-4d37-9999-6ec602323d87',
-            '6429517f-de96-4ff8-af2b-ff35683a0253'
-        ],
-        "senate_list": [
-            '6f4377a7-1292-43fe-9f69-acb61d9581d7',
-            '36bcc16f-73db-4704-a512-4fac702370c0',
-            '9ee99b2d-cf3d-44e4-956d-1a8a6c19a1e7'
-        ],
-        "house_list": [
-            'ee942010-37e9-4da5-8d1d-480f1f62e8a4',
-            '2594a8aa-1c51-49e7-b42b-71ed44c073b1',
-            '33d3d34e-abad-4ef4-af5e-04eb3f07f706'
-        ]
-    }
+    payload = {}
 
     # REGION
     if name == 'region':
-        id_list = geography_lists.get(f"{name}_list")
+        id_list = st.session_state.get(f"{name}_list")
         service_info = geography_dict.get(name)
         if not id_list or not service_info:
             print(None)
@@ -392,7 +378,7 @@ def geography_payload(globalid: str, name: str):
                 continue
             attrs = data[0].get("attributes", {})
             geom = data[0].get("geometry", {})
-            region_name = attrs.get("Name_Alt")
+            region_name = attrs.get("NameAlt")
             payload["adds"].append({
                 "attributes": {
                     "Region_Name": region_name,
@@ -403,7 +389,7 @@ def geography_payload(globalid: str, name: str):
 
     # BOROUGH
     if name == 'borough':
-        id_list = geography_lists.get(f"{name}_list")
+        id_list = st.session_state.get(f"{name}_list")
         service_info = geography_dict.get(name)
         if not id_list or not service_info:
             print(None)
@@ -416,7 +402,7 @@ def geography_payload(globalid: str, name: str):
             attrs = data[0].get("attributes", {})
             geom = data[0].get("geometry", {})
             fips = attrs.get('FIPS')
-            borough_name = attrs.get("Name_Alt")
+            borough_name = attrs.get("NameAlt")
             payload["adds"].append({
                 "attributes": {
                     "Bor_FIPS": fips,
@@ -428,7 +414,7 @@ def geography_payload(globalid: str, name: str):
 
     # SENATE
     if name == 'senate':
-        id_list = geography_lists.get(f"{name}_list")
+        id_list = st.session_state.get(f"{name}_list")
         service_info = geography_dict.get(name)
         if not id_list or not service_info:
             print(None)
@@ -451,7 +437,7 @@ def geography_payload(globalid: str, name: str):
 
     # HOUSE
     if name == 'house':
-        id_list = geography_lists.get(f"{name}_list")
+        id_list = st.session_state.get(f"{name}_list")
         service_info = geography_dict.get(name)
         if not id_list or not service_info:
             print(None)
@@ -476,5 +462,37 @@ def geography_payload(globalid: str, name: str):
                 "geometry": geom
             })
 
+
+    # routes
+    if name == 'route':
+        id_list = st.session_state.get(f"{name}_list")
+        service_info = geography_dict.get(name)
+        if not id_list or not service_info:
+            print(None)
+        payload = {"adds": []}
+        for item_id in id_list:
+            data = select_record(service_info["url"], service_info["layer"],
+                                "Route_ID", str(item_id), fields="*", return_geometry=True)
+            if not data:
+                continue
+            attrs = data[0].get("attributes", {})
+            geom = data[0].get("geometry", {})
+            route_id = attrs.get("Route_ID")
+            route_name = attrs.get("Route_Name")
+            payload["adds"].append({
+                "attributes": {
+                    "Impacted_Route_ID": route_id,
+                    "Impacted_Route_Name": route_name,
+                    "parentglobalid": globalid,
+                },
+                "geometry": geom
+            })
+
+
+
     # Return cleaned payload
-    return clean_payload(payload)
+    if payload == {}:
+        return None
+    
+    else:
+        return clean_payload(payload)

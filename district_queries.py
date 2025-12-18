@@ -28,6 +28,8 @@ def run_district_queries():
     st.session_state['borough_string'] = ""
     st.session_state['region_list'] = []
     st.session_state['region_string'] = ""
+    st.session_state['route_id'] = ""
+    st.session_state['route_name'] = ""
 
     # Only run queries if we have a geometry
     if st.session_state['project_geometry'] is not None:
@@ -87,6 +89,22 @@ def run_district_queries():
         )
         st.session_state['region_list'] = region.list_values or []
         st.session_state['region_string'] = region.string_values or ""
+
+
+        # If Routes, Intersect Route Layer
+        if st.session_state['selected_route']:
+            route = AGOLQueryIntersect(
+                url="https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/AKDOT_Routes_Mileposts/FeatureServer",
+                layer=0,
+                geometry=st.session_state['project_geometry'],
+                fields="Route_ID,Route_Name_Unique",
+                return_geometry=False,
+                list_values="Route_ID",
+                string_values="Route_Name_Unique"
+            )
+            st.session_state['route_list'] = route.list_values
+            st.session_state['route_ids'] = ",".join(route.list_values) or ""
+            st.session_state['route_names'] = route.string_values or ""
 
         # Clear the info message once complete
         info_placeholder.empty()

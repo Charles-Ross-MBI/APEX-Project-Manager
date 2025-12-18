@@ -290,6 +290,8 @@ elif st.session_state.step == 4:
         senate_val = st.session_state.get('senate_string')
         borough_val = st.session_state.get('borough_string')
         region_val = st.session_state.get('region_string')
+        route_ids = st.session_state.get('route_ids', None)
+        route_names = st.session_state.get('route_names', None)
 
         # --- Show expander if geometry has content ---
         if st.session_state['project_type'].startswith("Site") and point_val is not None and any([house_val, senate_val, borough_val, region_val]):
@@ -307,6 +309,8 @@ elif st.session_state.step == 4:
                 col2.markdown(f"**Senate Districts:** {senate_val or '—'}")
                 col1.markdown(f"**Boroughs:** {borough_val or '—'}")
                 col2.markdown(f"**Regions:** {region_val or '—'}")
+                st.markdown(f"**Route IDs:** {route_ids}")
+                st.markdown(f"**Route Names:** {route_names} ")
 
 
 
@@ -325,10 +329,7 @@ elif st.session_state.step == 5:
     review_information()
 
     st.write("")
-    # st.write("")
-    # if st.button("Confirm & Submit", type="primary"):
-    #     st.session_state.step = 6
-    #     st.rerun()
+    
 
 
 
@@ -352,7 +353,7 @@ elif st.session_state.step == 6:
         # Clear the container immediately so the button disappears
         upload_container.empty()
 
-        apex_url = "https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/service_ce928f8960394c63aa0bb2996c6eba4f/FeatureServer"
+        apex_url = "https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/service_84b35c7e7ef64ef887219e2b6e921444/FeatureServer"
         spinner_container = st.empty()
 
         # --- Upload Project ---
@@ -432,7 +433,7 @@ elif st.session_state.step == 6:
         with spinner_container, st.spinner("Loading Contacts to APEX..."):
             try:
                 payload_contacts = contacts_payload(st.session_state.get("apex_globalid"))
-                contacts_layer = 8
+                contacts_layer = 9
 
                 if payload_contacts is None:
                     load_contacts = None
@@ -453,6 +454,8 @@ elif st.session_state.step == 6:
                 st.error(f"LOAD CONTACTS: FAILURE ❌  {load_contacts.get('message')}")
                 st.session_state.setdefault("step_failures", []).append(load_contacts.get("message"))
 
+
+
         # --- Upload Geography ---
         with spinner_container, st.spinner("Loading Geography to APEX..."):
             geography_layers = {
@@ -462,15 +465,21 @@ elif st.session_state.step == 6:
                 "house": 7
             }
 
+            # If Selected
+            if st.session_state['selected_route']: geography_layers["route"] = 8   
+
+
             load_results = {}
 
             try:
                 for name, layer_id in geography_layers.items():
                     if f"{name}_list" in st.session_state:
+                        
                         payload = geography_payload(
                             st.session_state.get("apex_globalid"),
                             name
                         )
+
                         if payload is None:
                             load_results[name] = None
                         else:
@@ -500,16 +509,15 @@ elif st.session_state.step == 6:
         # --- Final check ---
         if st.session_state.get("step_failures"):
             st.warning("⚠️ Some steps failed during upload.")
+            st.makrdown(st.session_state.get("step_failures"))
             delete_container = st.empty()
             if delete_container.button("DELETE FROM APEX", type="primary", key="delete_apex_btn"):
                 delete_container.empty()
                 st.session_state["status_messages"].append("🗑️ Project deleted from APEX database due to failures")
         else:
             st.session_state['upload_complete'] = True
-            st.success("🎉 Upload finished! Project uploaded to APEX database.")
-
-
-
+            st.write("")
+            st.markdown( """ <h3 style="font-size:24px; font-weight:600;"> ✅ Upload Finished! Refresh the page to <span style="font-weight:700;">add a new project</span>. </h3> """, unsafe_allow_html=True )
 
 
 
@@ -528,21 +536,21 @@ if st.session_state.step == 6:
     with cols[1]:
         st.empty()
 
-    if st.session_state.get("upload_complete", False):
-        if st.button("Finish", type="primary", key="finish_btn"):
-            # Reset relevant state and go to Step 1
-            st.session_state.step = 1
-            st.session_state.upload_clicked = False
-            st.session_state.delete_clicked = False
-            st.session_state.step_failures = []
-            st.session_state.status_messages = []
-            st.session_state.apex_globalid = None
-            st.session_state.details_complete = False
-            st.session_state.project_type = None
-            st.session_state.selected_point = None
-            st.session_state.selected_route = None
+    # if st.session_state.get("upload_complete", False):
+    #     if st.button("Finish", type="primary", key="finish_btn"):
+    #         # Reset relevant state and go to Step 1
+    #         st.session_state.step = 1
+    #         st.session_state.upload_clicked = False
+    #         st.session_state.delete_clicked = False
+    #         st.session_state.step_failures = []
+    #         st.session_state.status_messages = []
+    #         st.session_state.apex_globalid = None
+    #         st.session_state.details_complete = False
+    #         st.session_state.project_type = None
+    #         st.session_state.selected_point = None
+    #         st.session_state.selected_route = None
 
-            st.rerun()
+    #         st.rerun()
 else:
     # Back button
     with cols[0]:

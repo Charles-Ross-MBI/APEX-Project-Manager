@@ -166,13 +166,20 @@ def review_information():
         col1.markdown(f"**APEX Info Sheet:** {st.session_state.get('apex_infosheet','—')}")
 
     
-     # Timeline
+     # Geography
     with st.expander("Geography", expanded=True):
         col1, col2 = st.columns(2)
         col1.markdown(f"**House Districts:** {st.session_state.get('house_string','')}")
         col2.markdown(f"**Senate Districts:** {st.session_state.get('senate_string','')}")
         col1.markdown(f"**Borough/Census Area:** {st.session_state.get('borough_string','')}")
         col2.markdown(f"**DOT&PF Region:** {st.session_state.get('region_string','')}")
+
+    # Routes
+    if st.session_state['selected_route']:
+        with st.expander("Routes", expanded=True):
+            st.markdown(f"**Route IDs:** {st.session_state.get('route_ids','')}")
+            st.markdown(f"**Route Names:** {st.session_state.get('route_names','')}")
+            
 
     # Impacted Communities
     with st.expander("Impacted Communities", expanded=True):

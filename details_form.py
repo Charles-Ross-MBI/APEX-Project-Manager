@@ -270,15 +270,23 @@ def _render_original_form(is_awp: bool):
             )
         st.write("")
 
+        
+
         st.markdown("<h5>2. CONSTRUCTION YEAR, PHASE, & IDS</h4>", unsafe_allow_html=True)
         col1, col2 = st.columns(2)
+
         with col1:
             cy_options = ['', 'CY2025', 'CY2026', 'CY2027', 'CY2028', 'CY2029', 'CY2030']
-            current_cy = st.session_state.get("construction_year", '')
+            # Determine current year in CY format
+            current_year = datetime.datetime.now().year
+            current_cy_str = f"CY{current_year}"
+            # If current year is not in the list, fall back to ''
+            default_index = cy_options.index(current_cy_str) if current_cy_str in cy_options else 0
+            current_cy = st.session_state.get("construction_year", cy_options[default_index])
             st.session_state["construction_year"] = st.selectbox(
                 "Construction Year*",
                 cy_options,
-                index=(cy_options.index(current_cy) if current_cy in cy_options else 0),
+                index=default_index,
                 key=widget_key("construction_year", version, is_awp),
             )
         with col2:

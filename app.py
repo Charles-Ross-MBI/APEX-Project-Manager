@@ -347,11 +347,32 @@ elif st.session_state.step == 6:
     st.write("")
     st.write("")
 
-    # --- Upload Button in a container ---
-    upload_container = st.empty()
-    if upload_container.button("UPLOAD TO APEX", type="primary", key="upload_apex_btn"):
-        # Clear the container immediately so the button disappears
-        upload_container.empty()
+    # ✅ Back + Upload buttons appear together BEFORE upload starts
+    col_back, col_upload, _ = st.columns([1, 1, 4])
+
+    if not st.session_state.get("upload_clicked", False):
+
+        # Back button (left)
+        with col_back:
+            st.button("⬅️ Back", on_click=prev_step)
+
+        # Upload button (right)
+        with col_upload:
+            upload_container = st.empty()
+            if upload_container.button("UPLOAD TO APEX", type="primary", key="upload_apex_btn"):
+                st.session_state.upload_clicked = True
+                upload_container.empty()
+                st.rerun()
+
+    else:
+        # ✅ After upload starts → hide both buttons
+        with col_back:
+            st.empty()
+        with col_upload:
+            st.empty()
+
+    # --- Upload Button Logic (unchanged) ---
+    if st.session_state.get("upload_clicked", False):
 
         apex_url = "https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/service_84b35c7e7ef64ef887219e2b6e921444/FeatureServer"
         spinner_container = st.empty()
@@ -454,8 +475,6 @@ elif st.session_state.step == 6:
                 st.error(f"LOAD CONTACTS: FAILURE ❌  {load_contacts.get('message')}")
                 st.session_state.setdefault("step_failures", []).append(load_contacts.get("message"))
 
-
-
         # --- Upload Geography ---
         with spinner_container, st.spinner("Loading Geography to APEX..."):
             geography_layers = {
@@ -465,9 +484,8 @@ elif st.session_state.step == 6:
                 "house": 7
             }
 
-            # If Selected
-            if st.session_state['selected_route']: geography_layers["route"] = 8   
-
+            if st.session_state['selected_route']:
+                geography_layers["route"] = 8   
 
             load_results = {}
 
@@ -523,6 +541,7 @@ elif st.session_state.step == 6:
 
 
 
+
 # -----------------------------------------------------------------------------
 # Navigation controls
 # -----------------------------------------------------------------------------
@@ -532,27 +551,26 @@ cols = st.columns([1, 1, 4])
 step = st.session_state.step
 upload_clicked = st.session_state.get("upload_clicked", False)
 
-# -----------------------------------------------------------------------------
-# STEP 6 (special behavior)
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# STEP 6 NAVIGATION — Back button mirrors the real upload button
+# -------------------------------------------------------------------------
 if step == 6:
 
-    # Before upload is clicked → show Back + Upload side-by-side
-    if not upload_clicked:
+    # When upload has NOT been clicked → show Back next to the real upload button
+    if not st.session_state.get("upload_clicked", False):
         with cols[0]:
             st.button("⬅️ Back", on_click=prev_step)
 
-        with cols[1]:
-            if st.button("Upload", type="primary", key="upload_btn"):
-                st.session_state.upload_clicked = True
-                st.rerun()
+        # DO NOT create another upload button here
+        # The real upload button is already in the main Step 6 UI
 
-    # After upload is clicked → hide both buttons
+    # After upload is clicked → hide Back button
     else:
         with cols[0]:
             st.empty()
         with cols[1]:
             st.empty()
+
 
 # -----------------------------------------------------------------------------
 # ALL OTHER STEPS

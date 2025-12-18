@@ -542,40 +542,17 @@ elif st.session_state.step == 6:
 
 
 
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Navigation controls
-# -----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 st.write("")
 cols = st.columns([1, 1, 4])
 
 step = st.session_state.step
-upload_clicked = st.session_state.get("upload_clicked", False)
 
-# -------------------------------------------------------------------------
-# STEP 6 NAVIGATION — Back button mirrors the real upload button
-# -------------------------------------------------------------------------
-if step == 6:
+# ✅ ALL STEPS EXCEPT STEP 6
+if step != 6:
 
-    # When upload has NOT been clicked → show Back next to the real upload button
-    if not st.session_state.get("upload_clicked", False):
-        with cols[0]:
-            st.button("⬅️ Back", on_click=prev_step)
-
-        # DO NOT create another upload button here
-        # The real upload button is already in the main Step 6 UI
-
-    # After upload is clicked → hide Back button
-    else:
-        with cols[0]:
-            st.empty()
-        with cols[1]:
-            st.empty()
-
-
-# -----------------------------------------------------------------------------
-# ALL OTHER STEPS
-# -----------------------------------------------------------------------------
-else:
     # Back button
     with cols[0]:
         st.button("⬅️ Back", on_click=prev_step, disabled=step == 1)
@@ -603,6 +580,7 @@ else:
             st.button("Next ➡️", on_click=next_step, disabled=not can_proceed)
 
     st.caption("Use Back and Next to navigate. Refresh will reset this session.")
+
 
 
 

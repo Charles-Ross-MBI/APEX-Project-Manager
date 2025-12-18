@@ -517,7 +517,7 @@ elif st.session_state.step == 6:
         else:
             st.session_state['upload_complete'] = True
             st.write("")
-            st.markdown( """ <h3 style="font-size:24px; font-weight:600;"> ✅ Upload Finished! Refresh the page to <span style="font-weight:700;">add a new project</span>. </h3> """, unsafe_allow_html=True )
+            st.markdown( """ <h5 style="font-size:24px; font-weight:600;"> ✅ Upload Finished! Refresh the page to <span style="font-weight:700;">add a new project</span>. </h5> """, unsafe_allow_html=True )
 
 
 
@@ -529,57 +529,59 @@ elif st.session_state.step == 6:
 st.write("")
 cols = st.columns([1, 1, 4])
 
-if st.session_state.step == 6:
-    # Hide Back/Next; show Finish only after upload completes
-    with cols[0]:
-        st.empty()
-    with cols[1]:
-        st.empty()
+step = st.session_state.step
+upload_done = st.session_state.get("upload_complete", False)
 
-    # if st.session_state.get("upload_complete", False):
-    #     if st.button("Finish", type="primary", key="finish_btn"):
-    #         # Reset relevant state and go to Step 1
-    #         st.session_state.step = 1
-    #         st.session_state.upload_clicked = False
-    #         st.session_state.delete_clicked = False
-    #         st.session_state.step_failures = []
-    #         st.session_state.status_messages = []
-    #         st.session_state.apex_globalid = None
-    #         st.session_state.details_complete = False
-    #         st.session_state.project_type = None
-    #         st.session_state.selected_point = None
-    #         st.session_state.selected_route = None
+# -----------------------------------------------------------------------------
+# STEP 6 (special behavior)
+# -----------------------------------------------------------------------------
+if step == 6:
 
-    #         st.rerun()
+    # While upload is NOT complete → hide Back
+    if not upload_done:
+        with cols[0]:
+            st.empty()
+        with cols[1]:
+            st.empty()
+
+    # After upload completes → show Back only
+    else:
+        with cols[0]:
+            st.button("⬅️ Back", on_click=prev_step)
+
+        with cols[1]:
+            st.empty()  # No Finish button anymore
+
+# -----------------------------------------------------------------------------
+# ALL OTHER STEPS
+# -----------------------------------------------------------------------------
 else:
     # Back button
     with cols[0]:
-        st.button("⬅️ Back", on_click=prev_step, disabled=st.session_state.step == 1)
+        st.button("⬅️ Back", on_click=prev_step, disabled=step == 1)
 
-    # Determine forward action
+    # Next button logic
     with cols[1]:
         can_proceed = False
-        if st.session_state.step == 1:
+
+        if step == 1:
             can_proceed = True
-        elif st.session_state.step == 2:
+        elif step == 2:
             can_proceed = st.session_state.get("details_complete", False)
-        elif st.session_state.step == 3:
+        elif step == 3:
             can_proceed = True
-        elif st.session_state.step == 4:
+        elif step == 4:
             if st.session_state.project_type:
                 if st.session_state.project_type.startswith("Site"):
                     can_proceed = st.session_state.selected_point is not None
                 else:
                     can_proceed = st.session_state.selected_route is not None
-            else:
-                can_proceed = False
-        elif st.session_state.step == 5:
+        elif step == 5:
             can_proceed = True
 
-        if st.session_state.step < TOTAL_STEPS:
-            # Always show Next ➡️, including Step 5
+        if step < TOTAL_STEPS:
             st.button("Next ➡️", on_click=next_step, disabled=not can_proceed)
 
-    # Only show caption when not on last step
     st.caption("Use Back and Next to navigate. Refresh will reset this session.")
+
 

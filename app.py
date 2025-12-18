@@ -530,27 +530,29 @@ st.write("")
 cols = st.columns([1, 1, 4])
 
 step = st.session_state.step
-upload_done = st.session_state.get("upload_complete", False)
+upload_clicked = st.session_state.get("upload_clicked", False)
 
 # -----------------------------------------------------------------------------
 # STEP 6 (special behavior)
 # -----------------------------------------------------------------------------
 if step == 6:
 
-    # While upload is NOT complete → hide Back
-    if not upload_done:
-        with cols[0]:
-            st.empty()
-        with cols[1]:
-            st.empty()
-
-    # After upload completes → show Back only
-    else:
+    # Before upload is clicked → show Back + Upload side-by-side
+    if not upload_clicked:
         with cols[0]:
             st.button("⬅️ Back", on_click=prev_step)
 
         with cols[1]:
-            st.empty()  # No Finish button anymore
+            if st.button("Upload", type="primary", key="upload_btn"):
+                st.session_state.upload_clicked = True
+                st.rerun()
+
+    # After upload is clicked → hide both buttons
+    else:
+        with cols[0]:
+            st.empty()
+        with cols[1]:
+            st.empty()
 
 # -----------------------------------------------------------------------------
 # ALL OTHER STEPS
@@ -583,5 +585,6 @@ else:
             st.button("Next ➡️", on_click=next_step, disabled=not can_proceed)
 
     st.caption("Use Back and Next to navigate. Refresh will reset this session.")
+
 
 

@@ -354,12 +354,12 @@ elif st.session_state.step == 6:
 
         # Back button (left)
         with col_back:
-            st.button("⬅️ Back", on_click=prev_step)
+            st.button("⬅️ Back", on_click=prev_step, key="step6_back_btn")
 
         # Upload button (right)
         with col_upload:
             upload_container = st.empty()
-            if upload_container.button("UPLOAD TO APEX", type="primary", key="upload_apex_btn"):
+            if upload_container.button("UPLOAD TO APEX", type="primary", key="step6_upload_btn"):
                 st.session_state.upload_clicked = True
                 upload_container.empty()
                 st.rerun()
@@ -370,6 +370,7 @@ elif st.session_state.step == 6:
             st.empty()
         with col_upload:
             st.empty()
+
 
     # --- Upload Button Logic (unchanged) ---
     if st.session_state.get("upload_clicked", False):

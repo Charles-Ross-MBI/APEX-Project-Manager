@@ -17,7 +17,10 @@ from map import add_small_geocoder, set_bounds_route, add_bottom_message, set_zo
 
 def point_shapefile():
     st.write("")
-    uploaded = st.file_uploader("Upload point shapefile (zip)", type=["zip"])
+    st.markdown("<h5>Upload a Point Shapefile (ZIP)</h5>", unsafe_allow_html=True)
+    uploaded = st.file_uploader("Upload a zipped point shapefile containing all required files "
+        "(.shp, .shx, .dbf, .prj).", type=["zip"])
+
 
     # ✅ If a new file is uploaded, process and store it
     if uploaded:
@@ -43,6 +46,8 @@ def point_shapefile():
 
     # ✅ If a point shapefile was uploaded earlier, display it again
     if st.session_state.get("point_shapefile_uploaded") and st.session_state.get("selected_point"):
+        st.write("")
+        st.markdown("<h5>Review Mapped Point</h5>", unsafe_allow_html=True)
         lat, lon = st.session_state.selected_point
         m = folium.Map(location=[lat, lon], zoom_start=12)
         folium.Marker([lat, lon], icon=folium.Icon(color="blue"), tooltip="Uploaded Point").add_to(m)
@@ -52,7 +57,9 @@ def point_shapefile():
 
 def polyline_shapefile():
     st.write("")
-    uploaded = st.file_uploader("Upload polyline shapefile (zip)", type=["zip"])
+    st.markdown("<h5>Upload a PolyLine Shapefile (ZIP)</h5>", unsafe_allow_html=True)
+    uploaded = st.file_uploader("Upload a zipped polyline shapefile containing all required files "
+        "(.shp, .shx, .dbf, .prj).", type=["zip"])
 
     # ✅ If a new file is uploaded, process and store it
     if uploaded:
@@ -77,6 +84,8 @@ def polyline_shapefile():
     # ✅ If a polyline shapefile was uploaded earlier, display it again
     if st.session_state.get("route_shapefile_uploaded") and st.session_state.get("selected_route"):
         #coords = [(lon, lat) for lat, lon in st.session_state.selected_route]
+        st.write("")
+        st.markdown("<h5>Review Mapped Route</h5>", unsafe_allow_html=True)
         coords = st.session_state['selected_route']
         bounds = set_bounds_route(coords)
         m = folium.Map(location=[coords[1][0], coords[1][0]], zoom_start=set_zoom(bounds))

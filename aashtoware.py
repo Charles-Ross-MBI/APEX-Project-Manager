@@ -9,7 +9,13 @@ from map import add_small_geocoder
 
 def aashtoware_point(lat: float, lon: float):
     st.write("")
+    st.markdown("<h5>AASHTOWare Coordinates</h5>", unsafe_allow_html=True)
+    st.write(
+        "The coordinates below reflect the project’s location in the AASHTOWare database. "
+        "If they are correct, you may continue. If not, please select another geospatial upload option."
+    )
 
+    
     # Two columns for lat and lon inputs
     cols = st.columns(2)
     with cols[0]:

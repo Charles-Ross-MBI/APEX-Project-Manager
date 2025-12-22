@@ -7,6 +7,7 @@ from agol_util import get_unique_field_values
 
 def enter_latlng():
     st.write("")
+    st.markdown("<h5>Enter Latitude & Longitude Coordinates</h5>", unsafe_allow_html=True)
 
     # If a point already exists, use it as default values
     existing_point = st.session_state.get("selected_point")
@@ -37,6 +38,9 @@ def enter_latlng():
         try:
             # ✅ Store consistently as [lat, lon]
             st.session_state.selected_point = [round(lat, 6), round(lon, 6)]
+
+            st.write("")
+            st.markdown("<h5>Review Mapped Point</h5>", unsafe_allow_html=True)
 
             m = folium.Map(location=[lat, lon], zoom_start=12)
             folium.Marker([lat, lon], icon=folium.Icon(color="blue"), tooltip="Uploaded Point").add_to(m)

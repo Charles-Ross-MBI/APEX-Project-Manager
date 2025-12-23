@@ -94,15 +94,18 @@ def project_payload():
         if st.session_state.get("selected_point"):
             pt = st.session_state["selected_point"]
             center = (pt.x, pt.y) if isinstance(pt, Point) else (pt[0], pt[1])
+            proj_type = "Site"
         elif st.session_state.get("selected_route"):
             route = st.session_state["selected_route"]
             center = get_line_center(route)
+            proj_type = "Route"
 
         # Build payload with .get() and default None
         payload = {
             "adds": [
                 {
                     "attributes": {
+                        "Proj_Type": proj_type,
                         "AWP_Proj_Name": st.session_state.get("awp_proj_name", None),
                         "Proj_Name": st.session_state.get("proj_name", None),
                         "IRIS": st.session_state.get("iris", None),
@@ -136,6 +139,7 @@ def project_payload():
                         "House_District": st.session_state.get("house_string", None),
                         "Proj_Web": st.session_state.get("proj_web", None),
                         "APEX_Mapper_Link": st.session_state.get("apex_mapper_link", None),
+                        'Submitted_By': st.session_state.get('submitted_by', None),
                         "Database_Status": "Review: Awaiting Review",
                         "Database_Status_Notes": st.session_state.get("database_status_notes", None),
                         "AWP_GUID": st.session_state.get("awp_globalid", None),

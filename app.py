@@ -20,7 +20,7 @@ from instructions import instructions
 from review import review_information
 from district_queries import run_district_queries
 from payloads import project_payload, communities_payload, geometry_payload, contacts_payload, geography_payload
-from agol_util import AGOLDataLoader, format_guid
+from agol_util import AGOLDataLoader, format_guid, delete_project
 
 
 st.set_page_config(page_title="Alaska DOT&PF - APEX Project Creator", page_icon="📝", layout="centered")
@@ -336,17 +336,50 @@ elif st.session_state.step == 5:
 elif st.session_state.step == 6:
     st.markdown("### UPLOAD PROJECT🚀")
     st.write(
-    "Click **UPLOAD TO APEX** to begin transferring your project data. "
-    "Each successful step will display a success message confirming the upload. "
-    "If any step fails, the program will list the errors so you can correct them and try again. "
-    "Once all steps succeed, your project will be fully stored in the APEX Database."
+        "Select your name from the dropdown. If not listed, choose **Other** and enter it in the text box. "
+        "Then click **UPLOAD TO APEX** to transfer your project data. "
+        "Each step shows a success message if completed, or errors to fix if it fails. "
+        "Once all steps succeed, your project will be stored in the APEX Database."
     )
+
 
     instructions("Upload Project")
 
     st.write("")
     st.write("")
 
+    st.markdown("<h5>Submitter Name</h5>", unsafe_allow_html=True)
+    # 🔽 Dropdown list of names 
+    names = ["",
+             "Christopher Butrico",
+             "Riley Conley", 
+             "Casey DunnGossin",
+             "Caitlin Frye", 
+             "Jennifer Gross",
+             "Alexander Hutcherson",
+             "Karin McGillivray", 
+             "Charles Ross",
+             "Andrew Tuell",
+             "Callan VanNuys",
+             "Malia Walters",
+             "Sara Wazir",
+             "Gretchen WeissBrooks",
+             "Hannah White", 
+             "Lauren Winkler", 
+             "Other"] 
+    selected_name = st.selectbox("Submitted by:", names, index=0)
+
+    # If "Other" is chosen, show a text box to override 
+    if selected_name == "Other": 
+        custom_name = st.text_input("Please type your name:") 
+        
+        if custom_name.strip(): 
+            st.session_state['submitted_by'] = custom_name
+
+    else: st.session_state['submitted_by'] = selected_name
+
+    st.write("")
+    st.markdown("<h5>Upload Project</h5>", unsafe_allow_html=True)
     # ✅ Back + Upload buttons appear together BEFORE upload starts
     col_back, col_gap, col_upload, _ = st.columns([1.5, 0.2, 3, 6])   # wider upload column
 
@@ -374,7 +407,7 @@ elif st.session_state.step == 6:
     # --- Upload Button Logic (unchanged) ---
     if st.session_state.get("upload_clicked", False):
 
-        apex_url = "https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/service_84b35c7e7ef64ef887219e2b6e921444/FeatureServer"
+        apex_url = "https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/service_0d036ae7c0a7424088ee565727d1bb66/FeatureServer"
         spinner_container = st.empty()
 
         # --- Upload Project ---
@@ -524,19 +557,33 @@ elif st.session_state.step == 6:
         else:
             st.success("LOAD GEOGRAPHIES: SUCCESS ✅")
 
+
         # --- Final check ---
         if st.session_state.get("step_failures"):
-            st.warning("⚠️ Some steps failed during upload.")
-            st.makrdown(st.session_state.get("step_failures"))
-            delete_container = st.empty()
-            if delete_container.button("DELETE FROM APEX", type="primary", key="delete_apex_btn"):
-                delete_container.empty()
-                st.session_state["status_messages"].append("🗑️ Project deleted from APEX database due to failures")
+            # Case 1: No GlobalID → project never loaded
+            if not st.session_state.get("apex_globalid"):
+                st.error("UPLOAD FAILED ❌ Project did not load into APEX. Please reset the application and try again.")
+            else:
+                # Case 2: GlobalID exists → run backend cleanup silently
+                try:
+                    if delete_project(apex_url, 0, st.session_state["apex_globalid"]):
+                        st.error("UPLOAD FAILED ❌ Please reset the application and try again.")
+                    else:
+                        st.error("UPLOAD FAILED ❌ Please reset the application and try again.")
+                except Exception:
+                    st.error("UPLOAD FAILED ❌ Please reset the application and try again.")
         else:
             st.session_state['upload_complete'] = True
             st.write("")
             st.write("")
-            st.markdown( """ <h5 style="font-size:20px; font-weight:600;"> ✅ Upload Finished! Refresh the page to <span style="font-weight:700;">add a new project</span>. </h5> """, unsafe_allow_html=True )
+            st.markdown(
+                """ <h5 style="font-size:20px; font-weight:600;">
+                ✅ Upload Finished! Refresh the page to <span style="font-weight:700;">add a new project</span>.
+                </h5> """,
+                unsafe_allow_html=True
+            )
+
+
 
 
 

@@ -118,28 +118,36 @@ Once satisfied, you may proceed to the next page in the workflow.
 """,
 
     "Upload Project": """
-##### Step 1: Upload to APEX
+##### Step 1: Select Your Name
+Choose your name from the dropdown list.  
+If not listed, select **Other** and enter it in the text box.  
+This ensures the project is correctly attributed before upload.
+
+---
+
+##### Step 2: Upload to APEX
 Click the **UPLOAD TO APEX** button to begin transferring your project data.  
 This will load all information into the **APEX Database**.
 
 ---
 
-##### Step 2: Success Messages
+##### Step 3: Success Messages
 Each successful step in the upload process will display a **success message**.  
 This confirms that the data has been properly stored.
 
 ---
 
-##### Step 3: Failure Messages
+##### Step 4: Failure Messages
 If any part of the upload fails, the program will display a list of what failed.  
 Review the errors, correct the issues, and try uploading again.
 
 ---
 
-##### Step 4: Completion
+##### Step 5: Completion
 Once all steps succeed, your project will be fully stored in the APEX Database.  
 You may then select **Finish** to reset the app and add another project or close the application.
-""",
+"""
+,
 
     "Other Tab Example": """
 #### Instructions

@@ -3,14 +3,14 @@ import requests
 import streamlit as st
 import logging
 
-import os
-from dotenv import load_dotenv
-load_dotenv()
-agol_username = os.getenv("AGOL_USERNAME")
-agol_password = os.getenv("AGOL_PASSWORD")
+# import os
+# from dotenv import load_dotenv
+# load_dotenv()
+# agol_username = os.getenv("AGOL_USERNAME")
+# agol_password = os.getenv("AGOL_PASSWORD")
 
-# agol_username = st.secrets["AGOL_USERNAME"]
-# agol_password = st.secrets["AGOL_PASSWORD"]
+agol_username = st.secrets["AGOL_USERNAME"]
+agol_password = st.secrets["AGOL_PASSWORD"]
 
 
 aashtoware = 'https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/AWP_PROJECTS_EXPORT_XYTableToPoint_ExportFeatures/FeatureServer'
@@ -276,6 +276,64 @@ def select_record(url: str, layer: int, id_field: str, id_value: str, fields = "
 
     except Exception as e:
         raise Exception(f"Error retrieving project record: {e}")
+    
+
+
+def delete_project(url: str, layer: int, globalid: str) -> bool:
+    """
+    Delete a project from an ArcGIS Feature Service using its GlobalID.
+
+    This function calls the ArcGIS REST API `deleteFeatures` endpoint to remove
+    a feature from the specified layer. It uses a `where` clause to match the
+    provided GlobalID.
+
+    Args:
+        url (str): Base URL of the Feature Service (ending with /FeatureServer).
+        layer (int): Layer index within the Feature Service where the project resides.
+        globalid (str): The GlobalID of the project to delete.
+
+    Returns:
+        bool: True if the project was successfully deleted, False otherwise.
+
+    Raises:
+        ValueError: If authentication fails or no token is retrieved.
+    """
+
+    try:
+        # Retrieve authentication token
+        token = get_agol_token()
+        if not token:
+            raise ValueError("Authentication failed: Invalid token.")
+
+        # Parameters for the deleteFeatures request
+        params = {
+            "where": f"GlobalID='{globalid}'",  # Filter by GlobalID
+            "f": "json",                        # Response format
+            "token": token                      # Authentication token
+        }
+
+        # Construct deleteFeatures endpoint URL
+        delete_url = f"{url}/{layer}/deleteFeatures"
+
+        # Send POST request to ArcGIS REST API
+        response = requests.post(delete_url, data=params)
+        result = response.json()
+
+        # Check response for deleteResults
+        if "deleteResults" in result:
+            success = all(r.get("success", False) for r in result["deleteResults"])
+            return True
+        else:
+            print("Unexpected response:", result)
+            return False
+
+    except Exception as e:
+        # Catch any errors (network, JSON parsing, etc.)
+        print(f"Error deleting project: {e}")
+        return False
+
+
+
 
 
 

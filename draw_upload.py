@@ -26,7 +26,7 @@ def draw_point():
 
     st.write("")
     st.markdown("<h5>Drop Point on a Map</h5>", unsafe_allow_html=True)
-    st.write( "Use the map to drop a pin for your project location. Select the pin icon on the left, " "then click on the map to place it. You can zoom or search for a location using the " "search bar in the top-right corner." )
+    st.write( "Use the map to drop a pin for your project location. Select the pin icon on the left, " "then click on the map to place it. You can zoom or search for a location using the " "search bar in the top-right corner.  If you need to override a previously saved point, drop the new point onto the map and the old one will be overwritten"  )
 
     # Create map centered on Alaska
     m = folium.Map(location=[64.0000, -152.0000], zoom_start=4)
@@ -88,7 +88,7 @@ def draw_line():
     st.write(
         "Use the map to draw your project route. Select the line tool on the left, "
         "then click along the map to trace the route. You can zoom or search for a location "
-        "using the search bar in the top-right corner."
+        "using the search bar in the top-right corner.  If you need to create a new route, draw the new route on the map and it will overwrite the old one."
     )
 
 
